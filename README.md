@@ -1,30 +1,48 @@
-# Nomi v1.0.0 — Functional V1
+# Nomi v1.1.0 — Live Restaurant Search
 
-Primeira versão funcional para GitHub Pages.
+Esta versão deixa de usar restaurantes gravados no código.
 
-## Funcionalidades
+## Alterações
 
-- Layout baseado no mockup oficial.
-- Home.
-- Mood.
-- Slider de orçamento.
-- Slider de distância.
-- Preferências múltiplas.
-- Recomendação principal.
-- Duas alternativas.
-- Explicação dinâmica.
-- Favoritos persistentes.
-- Histórico de decisões persistente.
-- Perfil básico.
-- PWA instalável no iPhone.
-- Funciona sem npm, build ou Expo.
+- Layout e alinhamentos corrigidos.
+- Mais opções no passo de preferências.
+- Pesquisa real pela localização do utilizador.
+- Pesquisa OpenStreetMap/Overpass por defeito.
+- Suporte preparado para Google Places através de backend/proxy seguro.
+- Resultados mostram nome, cozinha, distância, morada disponível e ligação ao mapa.
+- Não inventa ratings quando a fonte não os fornece.
 
-## Publicar
+## Google Places
 
-Substituir todo o conteúdo do repositório por este ZIP.
+Para usar Google Places, configure em `config.js` o URL de um backend/proxy seguro:
 
-Em GitHub:
+```js
+window.NOMI_CONFIG = {
+  GOOGLE_PLACES_PROXY_URL: "https://o-teu-backend.example/search"
+};
+```
 
-Settings → Pages → Deploy from a branch → main → /(root)
+Não colocar uma chave Google diretamente no JavaScript público do GitHub Pages.
 
-O ficheiro `index.html` tem de ficar na raiz.
+## Atualização do GitHub
+
+Substituir:
+- `index.html`
+- `styles.css`
+- `app.js`
+- `README.md`
+- `RELEASE_NOTES.md`
+
+Adicionar:
+- `config.js`
+
+Remover:
+- `assets/casa-mia.jpg`
+- `assets/osteria.jpg`
+- `assets/luce.jpg`
+
+Manter:
+- `assets/icon-192.png`
+- `assets/icon-512.png`
+- `manifest.webmanifest`
+- `.nojekyll`

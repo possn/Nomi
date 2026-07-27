@@ -1,22 +1,22 @@
-# Nomi v1.0.0 — Release Notes
+# Nomi v1.1.0 — Layout Repair + Live Search
 
-## Baseline oficial funcional
-
-Esta versão substitui todas as anteriores.
-
-## Ficheiros a substituir no GitHub
-
-Substituir todo o conteúdo do repositório.
-
-## Ficheiros principais
-
+## Ficheiros a substituir
 - index.html
 - styles.css
 - app.js
-- manifest.webmanifest
-- .nojekyll
-- assets/icon-192.png
-- assets/icon-512.png
+- README.md
+- RELEASE_NOTES.md
+
+## Ficheiro novo
+- config.js
+
+## Ficheiros a remover
 - assets/casa-mia.jpg
 - assets/osteria.jpg
 - assets/luce.jpg
+
+## Preservar
+- assets/icon-192.png
+- assets/icon-512.png
+- manifest.webmanifest
+- .nojekyll
