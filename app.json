@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Nomi",
+    "slug": "nomi",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF9F3"
+    },
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.onearete.nomi"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFF9F3"
+      },
+      "package": "com.onearete.nomi"
+    }
+  }
+}
