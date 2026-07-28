@@ -1,52 +1,33 @@
-# Motor Google Places — instalação
+# Cloudflare Worker — OneArete Decision Engine
 
-Este Worker mantém a chave Google fora do GitHub Pages.
+## Instalação
 
-## 1. Criar o Worker
+1. Abrir o Worker `nomi-decision-engine` na Cloudflare.
+2. Edit code.
+3. Apagar o código atual.
+4. Colar todo o conteúdo de `worker.js`.
+5. Deploy.
 
-No Cloudflare Dashboard:
+## Secrets e variáveis
 
-Workers & Pages → Create → Worker → Deploy.
+Obrigatório:
+- `GEMINI_API_KEY` — Secret.
 
-Depois use **Edit code** e substitua o conteúdo por `worker.js`.
+Recomendado:
+- `ALLOWED_ORIGIN` — URL exato do GitHub Pages, por exemplo `https://possn.github.io`.
 
-## 2. Guardar a chave
+Opcional:
+- `GEMINI_MODEL` — por omissão usa `gemini-2.5-flash`.
 
-Worker → Settings → Variables and Secrets → Add:
+## Teste
 
-- Nome: `GOOGLE_PLACES_API_KEY`
-- Tipo: Secret
-- Valor: a chave da Google Places API
+Abrir o endereço do Worker no browser. Deve devolver:
 
-Não colocar a chave em `config.js` nem no GitHub.
-
-## 3. Origem permitida
-
-Adicione uma variável normal:
-
-- Nome: `ALLOWED_ORIGIN`
-- Valor: `https://possn.github.io`
-
-## 4. Copiar o URL
-
-Exemplo:
-
-`https://nomi-places.<conta>.workers.dev`
-
-Coloque esse endereço em `config.js`:
-
-```js
-window.NOMI_CONFIG = {
-  GOOGLE_PLACES_PROXY_URL: "https://nomi-places.<conta>.workers.dev"
-};
+```json
+{
+  "ok": true,
+  "service": "OneArete Decision Engine",
+  "product": "Nomi",
+  "version": "3.0.1"
+}
 ```
-
-## 5. Google Cloud
-
-Ativar:
-
-- Places API (New)
-- faturação do projeto
-- restrição da chave à Places API
-
-O Worker usa Text Search (New), Place Photos e ranking contextual.
