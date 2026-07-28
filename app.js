@@ -726,7 +726,7 @@ function profile(){
       <div><span>Decisões</span><b>${state.history.length}</b></div>
       <div><span>Pesquisa</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'Google Places':'OpenStreetMap limitado'}</b></div>
       <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
-      <div><span>Versão</span><b>1.8.0</b></div>
+      <div><span>Versão</span><b>1.8.1</b></div>
     </div>
   </section></div></main>`;
 }

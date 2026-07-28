@@ -411,3 +411,59 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
   font-size:13px;
   line-height:1.4;
 }
+
+
+/* v1.8.1 — definitive footer/CTA separation */
+.persistent-nav{
+  bottom:max(4px,env(safe-area-inset-bottom));
+  min-height:56px;
+  height:64px;
+  width:min(calc(100% - 24px),452px);
+  border-radius:20px;
+  padding:5px 7px 6px;
+}
+.persistent-nav button{
+  font-size:10px;
+  line-height:1.05;
+}
+.persistent-nav .ni{
+  font-size:19px;
+  line-height:1;
+}
+
+.flow{
+  padding-bottom:max(158px,calc(env(safe-area-inset-bottom) + 142px))!important;
+}
+.flow .cta{
+  position:relative;
+  z-index:20;
+  flex:0 0 auto;
+  margin-top:24px!important;
+  margin-bottom:max(78px,calc(env(safe-area-inset-bottom) + 68px))!important;
+}
+.flow .flex{
+  min-height:34px;
+}
+
+.content,.list{
+  padding-bottom:max(94px,calc(env(safe-area-inset-bottom) + 82px))!important;
+}
+.results{
+  padding-bottom:max(190px,calc(env(safe-area-inset-bottom) + 170px))!important;
+}
+.results>.cta{
+  margin-bottom:88px!important;
+}
+
+@media(max-height:760px){
+  .persistent-nav{
+    height:58px;
+    min-height:54px;
+  }
+  .flow{
+    padding-bottom:144px!important;
+  }
+  .flow .cta{
+    margin-bottom:72px!important;
+  }
+}

@@ -1,52 +1,17 @@
-# Nomi v1.8.0 — Google Places Engine
+# Nomi v1.8.1 — Footer Overlap Repair
 
-## O problema corrigido
+Correção específica da navegação inferior:
 
-O OpenStreetMap consegue localizar estabelecimentos, mas não fornece de forma consistente:
+- footer mais baixo e compacto;
+- botão Continuar fica sempre totalmente acima do footer;
+- margem inferior protegida em todos os passos;
+- resultados e botão Decide por mim também deixam de ficar tapados;
+- mantém o footer em todos os ecrãs.
 
-- avaliações;
-- número de opiniões;
-- fotografias reais;
-- preço;
-- ambiente romântico;
-- qualidade;
-- reservas;
-- informação rica sobre o local.
+## Atualização
 
-Por isso apresentava opções próximas, mas pouco qualificadas.
-
-## Novo motor
-
-Esta versão inclui um backend Cloudflare Worker em `/worker` que usa:
-
-- Google Places Text Search (New);
-- pesquisas múltiplas relacionadas com mood e preferências;
-- fotografias reais do Google Places;
-- rating e número de opiniões;
-- preço;
-- distância;
-- reservas, esplanada, vinho, crianças e acessibilidade;
-- ranking contextual próprio da Nomi.
-
-Exemplo: “restaurante romântico, até 100 €, vista, num raio de 50 km” deixa de ser apenas uma pesquisa por proximidade.
-
-## Interface
-
-- Footer mais compacto.
-- Espaço inferior aumentado nos resultados.
-- Botão “Decide por mim” já não fica coberto.
-- Resultados indicam se estão a usar:
-  - Google Places premium; ou
-  - OpenStreetMap limitado.
-
-## Ficheiros
-
-Substituir todo o conteúdo do repositório por este ZIP.
-
-Depois configurar o Worker seguindo:
-
-`worker/README.md`
+Substituir todo o conteúdo do repositório pelo conteúdo deste ZIP.
 
 Abrir:
 
-`https://possn.github.io/Nomi/?v=1.8.0`
+`https://possn.github.io/Nomi/?v=1.8.1`
