@@ -5,7 +5,7 @@ function dismissStartupSplash(){
   window.setTimeout(()=>splash.classList.add('show-copy'),1250);
   window.setTimeout(()=>{
     splash.classList.add('hide');
-    window.setTimeout(()=>splash.remove(),650);
+    window.setTimeout(()=>{splash.remove();mountPersistentNav();},650);
   },4100);
   window.setTimeout(()=>{
     const stuck=document.getElementById('startupSplash');
@@ -27,7 +27,8 @@ const state={
   provider:'',
   fallbackNote:'',
   favorites:JSON.parse(localStorage.getItem('nomi:favorites')||'[]'),
-  history:JSON.parse(localStorage.getItem('nomi:history')||'[]')
+  history:JSON.parse(localStorage.getItem('nomi:history')||'[]'),
+  learned:JSON.parse(localStorage.getItem('nomi:learned')||'{"likes":{},"dislikes":{},"visits":0}')
 };
 
 const moods=[
@@ -49,6 +50,7 @@ const intentLabels={
 function save(){
   localStorage.setItem('nomi:favorites',JSON.stringify(state.favorites));
   localStorage.setItem('nomi:history',JSON.stringify(state.history));
+  localStorage.setItem('nomi:learned',JSON.stringify(state.learned));
 }
 function toast(t){
   toastEl.textContent=t;
@@ -68,6 +70,23 @@ function head(n,t){
   <div class="progress">${[1,2,3,4].map(i=>`<span class="${t} ${i<=n?'on':''}"></span>`).join('')}</div>`;
 }
 
+
+function activeNavForScreen(){
+  if(state.screen==='favorites')return 'favorites';
+  if(state.screen==='decisions')return 'decisions';
+  if(state.screen==='profile')return 'profile';
+  return 'home';
+}
+function removePersistentNav(){
+  document.querySelectorAll('.persistent-nav').forEach(el=>el.remove());
+}
+function mountPersistentNav(){
+  if(document.querySelector('.persistent-nav'))return;
+  document.body.insertAdjacentHTML('beforeend',nav(activeNavForScreen()));
+  const navEl=document.querySelector('body > .nav');
+  if(navEl)navEl.classList.add('persistent-nav');
+}
+
 function home(){
   const actions=[
     ['🍽️','Comer','primary','eat'],
@@ -83,7 +102,7 @@ function home(){
     <div class="actions">${actions.map(([e,l,c,intent])=>`
       <button class="action ${c}" onclick="start('${intent}')"><span class="e">${e}</span>${l}</button>`).join('')}
     </div>
-  </section>${nav('home')}</div></main>`;
+  </section></div></main>`;
 }
 
 function start(intent){
@@ -279,6 +298,16 @@ function matchDetails(tags,distanceKm){
     const hit=tags['drink:wine']==='served'||tags.wine==='yes'||tags.amenity==='bar';
     score+=hit?11:-2;if(hit)details.push('vinho');
   }
+
+
+  const learnedLikes=state.learned.likes||{};
+  const learnedDislikes=state.learned.dislikes||{};
+  Object.entries(learnedLikes).forEach(([key,value])=>{
+    if((lowCuisine+' '+String(tags.name||'')).includes(key.toLowerCase())) score+=Math.min(12,Number(value)*2);
+  });
+  Object.entries(learnedDislikes).forEach(([key,value])=>{
+    if((lowCuisine+' '+String(tags.name||'')).includes(key.toLowerCase())) score-=Math.min(14,Number(value)*3);
+  });
 
   const estimate=priceEstimate(tags);
   const budgetDiff=Math.abs(estimate-state.budget);
@@ -571,6 +600,37 @@ function openExternal(url){
   window.open(url,'_blank','noopener');
 }
 
+
+function closeFeedback(){document.getElementById('feedbackLayer')?.remove()}
+function learnFromResult(id,liked){
+  const result=state.results.find(x=>x.id===id);
+  if(!result)return;
+  const cuisine=String(result.cuisine||'Restaurante').split('·')[0].trim().toLowerCase();
+  const bucket=liked?'likes':'dislikes';
+  state.learned[bucket]=state.learned[bucket]||{};
+  state.learned[bucket][cuisine]=(state.learned[bucket][cuisine]||0)+1;
+  state.learned.visits=(state.learned.visits||0)+1;
+  save();
+  closeFeedback();
+  toast(liked?'A Nomi aprendeu com esta escolha':'A Nomi vai evitar escolhas semelhantes');
+}
+function openFeedback(id){
+  const result=state.results.find(x=>x.id===id);
+  if(!result)return;
+  const layer=document.createElement('div');
+  layer.id='feedbackLayer';
+  layer.innerHTML=`<div class="feedback-backdrop" onclick="closeFeedback()"></div>
+    <section class="feedback-sheet">
+      <div class="feedback-handle"></div>
+      <h2>Como correu?</h2>
+      <p>${result.name}</p>
+      <button class="feedback-good" onclick="learnFromResult('${result.id}',true)">Gostei desta escolha</button>
+      <button class="feedback-bad" onclick="learnFromResult('${result.id}',false)">Não era para mim</button>
+      <button class="feedback-later" onclick="closeFeedback()">Mais tarde</button>
+    </section>`;
+  document.body.appendChild(layer);
+}
+
 function result(){
   const [f,...rest]=state.results;
   const bg=f.imageUrl?`style="background-image:url('${String(f.imageUrl).replace(/'/g,"%27")}')"`:'';
@@ -599,6 +659,7 @@ function result(){
           <a class="google" target="_blank" rel="noopener" href="${f.googleUrl||map(f)}">Google Maps</a>
         </div>
         <div class="tap-hint">Toca no cartão para abrir no Google Maps</div>
+        <button class="visited-btn" onclick="event.stopPropagation();openFeedback('${f.id}')">Já fui · ensinar a Nomi</button>
       </div>
     </article>
 
@@ -633,7 +694,7 @@ function favorites(){
         <div><b>${f.name}</b><small>${f.cuisine||''} · ${(f.distanceKm||0).toFixed(1)} km</small></div>
         <button class="icon-btn" onclick="state.favorites=state.favorites.filter(x=>x.id!=='${f.id}');save();render()">♥</button>
       </div>`).join(''):`<div class="empty">Ainda não guardaste opções.</div>`}
-  </section>${nav('favorites')}</div></main>`;
+  </section></div></main>`;
 }
 
 function decisions(){
@@ -645,7 +706,7 @@ function decisions(){
         <b>${h.restaurant}</b>
         <small>${intentLabels[h.intent||'eat']} · ${h.mood} · ${h.budget} € · até ${h.distance} min · ${new Date(h.at).toLocaleDateString('pt-PT')}</small>
       </div>`).join(''):`<div class="empty">As tuas decisões aparecerão aqui.</div>`}
-  </section>${nav('decisions')}</div></main>`;
+  </section></div></main>`;
 }
 
 function profile(){
@@ -657,9 +718,10 @@ function profile(){
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
       <div><span>Pesquisa</span><b>Ao vivo e contextual</b></div>
-      <div><span>Versão</span><b>1.6.0</b></div>
+      <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
+      <div><span>Versão</span><b>1.7.0</b></div>
     </div>
-  </section>${nav('profile')}</div></main>`;
+  </section></div></main>`;
 }
 
 function back(){
@@ -687,15 +749,18 @@ function closeDrawer(){document.getElementById('drawerLayer')?.remove()}
 function clearNomiData(){
   localStorage.removeItem('nomi:favorites');
   localStorage.removeItem('nomi:history');
-  state.favorites=[];state.history=[];
+  localStorage.removeItem('nomi:learned');
+  state.favorites=[];state.history=[];state.learned={likes:{},dislikes:{},visits:0};
   closeDrawer();toast('Dados locais eliminados');render();
 }
 
 function render(){
+  removePersistentNav();
   ({
     home,mood,budget,distance,prefs:preferences,
     searching,error,result,favorites,decisions,profile
   }[state.screen]||home)();
+  if(!document.getElementById('startupSplash'))mountPersistentNav();
 }
 render();
 dismissStartupSplash();
