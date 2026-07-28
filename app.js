@@ -525,6 +525,41 @@ async function enrichPhotos(items){
   return [...enriched,...items.slice(8)];
 }
 
+
+function requestSummary(){
+  const selected=state.prefs.length?state.prefs.join(', '):'sem preferências adicionais';
+  return `${intentLabels[state.intent]}, ${state.mood||'mood livre'}, até ${state.budget} €, até ${state.distance} min, ${selected}`;
+}
+
+function minimumAcceptableScore(){
+  let threshold=72;
+  if(state.mood==='Romântico')threshold+=5;
+  if(state.prefs.includes('Vista'))threshold+=6;
+  if(state.prefs.includes('Vegan')||state.prefs.includes('Vegetariano'))threshold+=4;
+  if(state.budget>=50)threshold+=2;
+  return Math.min(88,threshold);
+}
+
+function strictFilter(items){
+  const threshold=minimumAcceptableScore();
+  const filtered=items.filter(item=>Number(item.score||0)>=threshold);
+  return filtered.length>=3?filtered:items.filter(item=>Number(item.score||0)>=threshold-8);
+}
+
+function googleMapsDiscoveryUrl(){
+  const parts=[intentLabels[state.intent]];
+  if(state.mood)parts.push(state.mood);
+  if(state.prefs.includes('Vista'))parts.push('com vista');
+  if(state.prefs.includes('Esplanada'))parts.push('com esplanada');
+  if(state.prefs.includes('Sushi'))parts.push('sushi');
+  if(state.prefs.includes('Massa'))parts.push('italiano');
+  if(state.prefs.includes('Carne'))parts.push('steakhouse');
+  if(state.prefs.includes('Peixe'))parts.push('marisco peixe');
+  if(state.prefs.includes('Vegan'))parts.push('vegan');
+  if(state.prefs.includes('Vegetariano'))parts.push('vegetariano');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(' '))}`;
+}
+
 async function search(){
   state.screen='searching';
   state.error='';
@@ -537,7 +572,10 @@ async function search(){
     state.results=proxy?await google(proxy,loc):await overpass(loc);
     
     state.provider=proxy?'Google Places':'OpenStreetMap';
-    if(!state.results.length) throw new Error('Não encontrei opções nesta distância. Aumenta o raio e tenta novamente.');
+    state.results=strictFilter(state.results);
+    if(!state.results.length){
+      throw new Error('Não encontrei opções com qualidade suficiente para estes critérios. Experimenta aumentar a distância ou remover uma preferência.');
+    }
 
     const f=state.results[0];
     state.history=[{
@@ -646,9 +684,13 @@ function result(){
       <button class="icon-btn" onclick="search()" aria-label="Pesquisar novamente">↻</button>
     </div>
 
-    <div class="search-mode-banner">${state.provider==='Google Places'
-      ?'Pesquisa premium: Google Places, avaliações, fotografias, preço e relevância contextual.'
-      :'Modo limitado OpenStreetMap. Para resultados realmente qualificados, ativa o Worker Google Places incluído no ZIP.'}</div>
+    <div class="search-mode-banner">
+      <strong>${state.provider==='Google Places'?'Pesquisa qualificada Google Places':'Pesquisa aproximada OpenStreetMap'}</strong>
+      <span>${requestSummary()}</span>
+      ${state.provider==='OpenStreetMap'
+        ?`<a target="_blank" rel="noopener" href="${googleMapsDiscoveryUrl()}">Pesquisar estes critérios no Google Maps</a>`
+        :''}
+    </div>
     <article class="maincard has-photo clickable-result" ${bg}
       onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">
       <div class="badge">♥ ${f.score}%<br>match</div>
@@ -685,7 +727,7 @@ function result(){
 
     <button class="cta" onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">🎲 Decide por mim</button>
     <div class="note">
-      Resultados ao vivo via ${state.provider}.${state.provider==='OpenStreetMap'?' Para pesquisa premium, configure o Worker Google Places incluído no ZIP.':''}
+      Resultados ao vivo via ${state.provider}.${state.provider==='OpenStreetMap'?' Estes resultados são aproximados; o Google Places é necessário para ratings, fotografias e contexto fiável.':''}
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
       Fotografias públicas são procuradas automaticamente; quando não existem, aparece uma imagem de localização.
     </div>
@@ -726,7 +768,7 @@ function profile(){
       <div><span>Decisões</span><b>${state.history.length}</b></div>
       <div><span>Pesquisa</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'Google Places':'OpenStreetMap limitado'}</b></div>
       <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
-      <div><span>Versão</span><b>1.8.1</b></div>
+      <div><span>Versão</span><b>1.9.0</b></div>
     </div>
   </section></div></main>`;
 }

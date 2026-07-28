@@ -1,17 +1,49 @@
-# Nomi v1.8.1 — Footer Overlap Repair
+# Nomi v1.9.0 — Search Quality and Footer Repair
 
-Correção específica da navegação inferior:
+## Footer
 
-- footer mais baixo e compacto;
-- botão Continuar fica sempre totalmente acima do footer;
-- margem inferior protegida em todos os passos;
-- resultados e botão Decide por mim também deixam de ficar tapados;
-- mantém o footer em todos os ecrãs.
+Nos resultados, o footer deixa de flutuar sobre os cartões.
+
+Passa a aparecer no fim da página, depois do conteúdo e dos botões. Nos ecrãs curtos mantém-se compacto e acessível.
+
+## Motor de pesquisa
+
+O motor foi refinado para evitar recomendações apenas por proximidade.
+
+### Google Places
+
+O Worker passa a executar várias pesquisas:
+
+- contexto e mood;
+- avaliação elevada;
+- ocasião especial;
+- restaurante romântico;
+- restaurante com vista, rooftop ou waterfront;
+- cozinha selecionada;
+- nível de preço compatível.
+
+O ranking penaliza fortemente:
+
+- locais sem sinal de vista quando “Vista” é prioritária;
+- cozinha incompatível;
+- avaliações baixas;
+- pouco volume de opiniões;
+- preço claramente incompatível.
+
+### OpenStreetMap
+
+O modo OpenStreetMap passa a assumir claramente que é aproximado.
+
+Resultados abaixo do nível mínimo de qualidade são removidos. A app fornece ainda um link para pesquisar os critérios exatos no Google Maps.
+
+## Importante
+
+Para obter recomendações realmente boas, fotografias, ratings e contexto, é necessário configurar o Worker Google Places incluído em:
+
+`worker/README.md`
 
 ## Atualização
 
-Substituir todo o conteúdo do repositório pelo conteúdo deste ZIP.
+Substituir todo o conteúdo do repositório e abrir:
 
-Abrir:
-
-`https://possn.github.io/Nomi/?v=1.8.1`
+`https://possn.github.io/Nomi/?v=1.9.0`
