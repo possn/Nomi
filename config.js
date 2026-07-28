@@ -1,8 +1,4 @@
 window.NOMI_CONFIG = {
-  // Cola aqui o endereço completo do Worker, sem barra final.
-  // Exemplo: https://nomi-decision-engine.nome.workers.dev
-  ODE_URL: "",
-
-  // Compatibilidade com versões anteriores. Não é necessário preencher se ODE_URL estiver definido.
+  ODE_URL: "https://nomi-decision-engine.pedrossnunes.workers.dev",
   GOOGLE_PLACES_PROXY_URL: ""
 };
