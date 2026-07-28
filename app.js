@@ -586,10 +586,10 @@ async function search(){
     const p=await geo();
     const loc={lat:p.coords.latitude,lon:p.coords.longitude};
     const base=(window.NOMI_CONFIG?.ODE_URL||window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL||'').replace(/\/$/,'');
-    const proxy=base?`${base}/decision`:'';
-    state.results=proxy?await google(proxy,loc):await overpass(loc);
-    
-    state.provider=proxy?'ODE · Gemini + Google Maps':'OpenStreetMap';
+    if(!base) throw new Error('O OneArete Decision Engine não está configurado. Atualiza o config.js.');
+    const proxy=`${base}/decision`;
+    state.results=await google(proxy,loc);
+    state.provider='ODE · Gemini + Google Maps';
     state.results=strictFilter(state.results);
     if(!state.results.length){
       throw new Error('Não encontrei opções com qualidade suficiente para estes critérios. Experimenta aumentar a distância ou remover uma preferência.');

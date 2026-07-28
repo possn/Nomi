@@ -1,4 +1,4 @@
-# Nomi v3.1.0 — ODE Live Decision Integration
+# Nomi v3.1.1 — ODE Live Decision Integration
 
 ## Implementado
 

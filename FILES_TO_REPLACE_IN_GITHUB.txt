@@ -1,23 +1,12 @@
-Nomi v3.1.0 — ficheiros a substituir no GitHub
+NOMI v3.1.1 — ROMANTIC RELEVANCE REPAIR
 
-SUBSTITUIR NA RAIZ:
-- index.html
-- 404.html
+SUBSTITUIR NO GITHUB:
 - app.js
-- styles.css
 - config.js
-- manifest.webmanifest
-- sw.js
 - README.md
 - RELEASE_NOTES.md
-- FILES_TO_REPLACE_IN_GITHUB.txt
 
-MANTER / CONFIRMAR:
-- assets/icon-192.png
-- assets/icon-512.png
-- assets/startup-splash.png
+ATUALIZAR NA CLOUDFLARE:
+- worker/worker.js
 
-CLOUDFLARE (não vai para GitHub Pages):
-- substituir o código do Worker por worker/worker.js
-- manter a secret GEMINI_API_KEY
-- opcional: ALLOWED_ORIGIN=https://possn.github.io
+NÃO É NECESSÁRIO SUBSTITUIR OS ASSETS.
