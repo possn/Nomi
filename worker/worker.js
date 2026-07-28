@@ -63,8 +63,8 @@ function validate(input) {
 function buildQueries(input) {
   const intent = {
     eat: "restaurante",
-    coffee: "café",
-    drink: "bar cocktails wine bar",
+    coffee: "café specialty coffee",
+    drink: "cocktail bar wine bar rooftop bar",
     dessert: "pastelaria sobremesas gelataria",
     surprise: "restaurante café bar"
   }[input.intent] || "restaurante";
@@ -72,31 +72,39 @@ function buildQueries(input) {
   const cuisine = [];
   for (const p of input.preferences || []) {
     if (p === "Sushi") cuisine.push("sushi japonês");
-    if (p === "Massa") cuisine.push("italiano massas");
-    if (p === "Carne") cuisine.push("steakhouse carne grelhada");
-    if (p === "Peixe") cuisine.push("peixe marisco seafood");
-    if (p === "Vegetariano") cuisine.push("vegetariano");
-    if (p === "Vegan") cuisine.push("vegan");
+    if (p === "Massa") cuisine.push("restaurante italiano massas");
+    if (p === "Carne") cuisine.push("steakhouse fine dining grelhados");
+    if (p === "Peixe") cuisine.push("restaurante peixe marisco seafood");
+    if (p === "Vegetariano") cuisine.push("restaurante vegetariano");
+    if (p === "Vegan") cuisine.push("restaurante vegan");
   }
 
-  const atmosphere = [];
-  if (input.mood === "Romântico") atmosphere.push("romântico elegante intimate date night");
-  if (input.mood === "Família") atmosphere.push("familiar crianças");
-  if (input.mood === "Trabalho") atmosphere.push("tranquilo negócios");
-  if (input.mood === "Relaxado") atmosphere.push("calmo descontraído");
-  if (input.mood === "Celebrar") atmosphere.push("celebração especial");
-  if ((input.preferences || []).includes("Vista")) atmosphere.push("com vista rooftop waterfront");
-  if ((input.preferences || []).includes("Esplanada")) atmosphere.push("com esplanada");
-  if ((input.preferences || []).includes("Silêncio")) atmosphere.push("silencioso tranquilo");
+  const moodTerms = [];
+  if (input.mood === "Romântico") moodTerms.push("romântico elegante intimate date night fine dining");
+  if (input.mood === "Família") moodTerms.push("familiar crianças");
+  if (input.mood === "Trabalho") moodTerms.push("tranquilo negócios");
+  if (input.mood === "Relaxado") moodTerms.push("calmo descontraído");
+  if (input.mood === "Celebrar") moodTerms.push("celebração especial");
+  if ((input.preferences || []).includes("Vista")) moodTerms.push("vista panorâmica rooftop waterfront ocean view river view");
+  if ((input.preferences || []).includes("Esplanada")) moodTerms.push("esplanada outdoor seating");
+  if ((input.preferences || []).includes("Silêncio")) moodTerms.push("silencioso tranquilo");
 
-  const base = [intent, cuisine.join(" "), atmosphere.join(" ")].filter(Boolean).join(" ");
+  const budgetTerm = Number(input.budget || 30) >= 70
+    ? "premium fine dining"
+    : Number(input.budget || 30) >= 40
+      ? "qualidade elevada"
+      : "bom preço";
+
+  const core = [intent, cuisine.join(" "), moodTerms.join(" "), budgetTerm].filter(Boolean).join(" ").trim();
   const variants = [
-    base,
-    `${base} melhor avaliação`,
-    `${base} recomendado`,
+    core,
+    `${core} melhor avaliação`,
+    `${core} recomendado para ocasião especial`,
+    input.mood === "Romântico" ? `${intent} romantic restaurant with view` : "",
+    (input.preferences || []).includes("Vista") ? `${intent} rooftop panoramic view` : ""
   ];
 
-  return [...new Set(variants.map((q) => q.trim()).filter(Boolean))].slice(0, 3);
+  return [...new Set(variants.map(q => q.trim()).filter(Boolean))].slice(0, 5);
 }
 
 async function googleTextSearch(textQuery, input, apiKey) {
@@ -209,36 +217,51 @@ async function resolvePhoto(photoName, apiKey) {
 }
 
 function score(place, input, distanceKm) {
-  let points = 44;
+  let points = 34;
   const rating = Number(place.rating || 0);
   const reviews = Number(place.userRatingCount || 0);
-
-  points += Math.max(0, (rating - 3.5) * 15);
-  points += Math.min(16, Math.log10(Math.max(1, reviews)) * 5);
-  points += Math.max(-18, 16 - distanceKm * 1.35);
-
   const prefs = input.preferences || [];
-  const types = (place.types || []).join(" ").toLowerCase();
-  const label = `${place.primaryType || ""} ${place.primaryTypeDisplayName?.text || ""}`.toLowerCase();
+  const text = [
+    place.primaryType || "",
+    place.primaryTypeDisplayName?.text || "",
+    ...(place.types || [])
+  ].join(" ").toLowerCase();
+
+  if (rating) points += Math.max(-10, (rating - 3.8) * 22);
+  if (reviews) points += Math.min(18, Math.log10(Math.max(1, reviews)) * 6);
+  points += Math.max(-16, 14 - distanceKm * 0.9);
 
   if (input.mood === "Romântico") {
-    if (place.reservable) points += 7;
-    if (rating >= 4.4) points += 7;
-    if (reviews >= 100) points += 4;
+    if (place.reservable) points += 10;
+    if (rating >= 4.5) points += 12;
+    if (reviews >= 150) points += 8;
+    if (/fine_dining|restaurant/.test(text)) points += 5;
   }
-  if (input.mood === "Família" && place.goodForChildren) points += 12;
-  if (prefs.includes("Esplanada") && place.outdoorSeating) points += 12;
-  if (prefs.includes("Vinho") && place.servesWine) points += 9;
-  if (prefs.includes("Acessível") && place.accessibilityOptions?.wheelchairAccessibleEntrance) points += 10;
 
-  if (prefs.includes("Sushi") && /sushi|japanese/.test(types + label)) points += 22;
-  if (prefs.includes("Massa") && /italian|pizza/.test(types + label)) points += 18;
-  if (prefs.includes("Carne") && /steak|barbecue|grill/.test(types + label)) points += 18;
-  if (prefs.includes("Peixe") && /seafood/.test(types + label)) points += 18;
-  if (prefs.includes("Vegan") && /vegan/.test(types + label)) points += 20;
-  if (prefs.includes("Vegetariano") && /vegetarian/.test(types + label)) points += 18;
+  if (prefs.includes("Vista")) {
+    const viewSignal = /rooftop|view|waterfront|tourist_attraction|marina/.test(text);
+    points += viewSignal ? 22 : -14;
+  }
+  if (prefs.includes("Esplanada")) points += place.outdoorSeating ? 14 : -6;
+  if (prefs.includes("Vinho")) points += place.servesWine ? 10 : -2;
+  if (prefs.includes("Crianças")) points += place.goodForChildren ? 12 : -3;
+  if (prefs.includes("Acessível")) {
+    points += place.accessibilityOptions?.wheelchairAccessibleEntrance ? 10 : -4;
+  }
+
+  if (prefs.includes("Sushi")) points += /sushi|japanese/.test(text) ? 26 : -20;
+  if (prefs.includes("Massa")) points += /italian|pizza/.test(text) ? 22 : -16;
+  if (prefs.includes("Carne")) points += /steak|barbecue|grill/.test(text) ? 22 : -14;
+  if (prefs.includes("Peixe")) points += /seafood/.test(text) ? 22 : -14;
+  if (prefs.includes("Vegan")) points += /vegan/.test(text) ? 24 : -18;
+  if (prefs.includes("Vegetariano")) points += /vegetarian/.test(text) ? 22 : -14;
 
   points += budgetFit(place.priceLevel, Number(input.budget || 30));
+
+  if (Number(input.budget || 30) >= 70 && place.priceLevel === "PRICE_LEVEL_INEXPENSIVE") {
+    points -= 10;
+  }
+
   return Math.max(1, Math.min(99, Math.round(points)));
 }
 
