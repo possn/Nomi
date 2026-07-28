@@ -1,8 +1,10 @@
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const VERSION = "3.1.0";
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
     const allowed = env.ALLOWED_ORIGIN || "*";
     const cors = {
@@ -14,15 +16,17 @@ export default {
     };
 
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
-    if (request.method === "GET") return json({ ok: true, service: "OneArete Decision Engine", product: "Nomi", version: "3.0.1" }, 200, cors);
-    if (request.method !== "POST") return json({ error: "Use POST para pedir uma decisão." }, 405, cors);
+    if (request.method === "GET" && ["/", "/health"].includes(url.pathname)) {
+      return json({ ok: true, service: "OneArete Decision Engine", product: "Nomi", version: VERSION, geminiConfigured: Boolean(env.GEMINI_API_KEY) }, 200, cors);
+    }
+    if (request.method === "GET" && url.pathname === "/version") return json({ version: VERSION }, 200, cors);
+    if (request.method !== "POST" || url.pathname !== "/decision") return json({ error: "Usa POST /decision para pedir uma decisão." }, 405, cors);
     if (!env.GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY não configurada no Worker." }, 500, cors);
 
     try {
       const input = await request.json();
       validate(input);
-      const result = await decide(input, env);
-      return json(result, 200, cors);
+      return json(await decide(input, env), 200, cors);
     } catch (error) {
       return json({ error: error?.message || "Erro interno do OneArete Decision Engine." }, 500, cors);
     }
@@ -31,16 +35,11 @@ export default {
 
 async function decide(input, env) {
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
-  const prompt = buildPrompt(input);
   const body = {
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
     tools: [{ googleMaps: {} }],
-    toolConfig: {
-      retrievalConfig: {
-        latLng: { latitude: Number(input.latitude), longitude: Number(input.longitude) }
-      }
-    },
-    generationConfig: { temperature: 0.25, maxOutputTokens: 4096 }
+    toolConfig: { retrievalConfig: { latLng: { latitude: Number(input.latitude), longitude: Number(input.longitude) } } },
+    generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json" }
   };
 
   const response = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
@@ -65,8 +64,10 @@ async function decide(input, env) {
   return {
     provider: "Gemini + Google Maps",
     engine: "OneArete Decision Engine",
+    version: VERSION,
     domain: input.domain || "restaurant",
     confidence: clamp(Number(parsed.confidence || 0.82), 0.3, 0.99),
+    uncertainty: Array.isArray(parsed.uncertainty) ? parsed.uncertainty.filter(Boolean).slice(0, 4) : [],
     places,
     sources
   };
@@ -81,13 +82,14 @@ function buildPrompt(input) {
     : `Encontra ${labelIntent(input.intent)} reais. Contexto: ${input.mood || "casual"}.`;
 
   return `You are the OneArete Decision Engine powering Nomi. Use Google Maps grounding. ${task}
-User location is supplied to the Maps tool. Maximum radius: ${radiusKm} km. Budget: ${Number(input.budget || 30)} EUR ${family ? "for the group" : "per person"}. Preferences: ${prefs}.
+Maximum radius: ${radiusKm} km. Budget: ${Number(input.budget || 30)} EUR ${family ? "for the group" : "per person"}. Preferences: ${prefs}.
 
-Select only real places that fit the request. Prioritize contextual fit, quality, review evidence, distance, budget plausibility, current relevance, and diversity. For family activities, reject generic shops and adult-only venues. For restaurants, reject results that conflict with cuisine or occasion. Do not invent ratings, prices, addresses, opening hours, or distances. When exact data is unavailable, use null or an empty string.
+Deliberate internally across fit, quality, distance, budget, popularity, family suitability, accessibility and occasion. Select only real places. Never invent factual data. For missing facts use null or empty strings. Reservation or ticket URLs may only be returned when grounded or clearly official.
 
-Return ONLY valid JSON, with no markdown and no prose outside JSON, using this exact shape:
+Return ONLY valid JSON:
 {
   "confidence": 0.0,
+  "uncertainty": [""],
   "recommendations": [
     {
       "name": "",
@@ -100,11 +102,14 @@ Return ONLY valid JSON, with no markdown and no prose outside JSON, using this e
       "score": 0,
       "why": ["", "", ""],
       "bestFor": "",
-      "mapsTitle": ""
+      "mapsTitle": "",
+      "website": "",
+      "reservationUrl": "",
+      "ticketUrl": ""
     }
   ]
 }
-Return 5 to 8 recommendations, ordered best first. Score must be an integer from 1 to 99.`;
+Return 5 to 8 recommendations ordered best first. Score is an integer 1-99.`;
 }
 
 function normalize(item, sources, input, index) {
@@ -124,7 +129,9 @@ function normalize(item, sources, input, index) {
     userRatingCount: Math.max(0, Number(item.reviewCount || 0)),
     priceLevel: item.estimatedPrice || null,
     imageUrl: "",
-    website: "",
+    website: safeUrl(item.website),
+    reservationUrl: safeUrl(item.reservationUrl),
+    ticketUrl: safeUrl(item.ticketUrl),
     googleUrl: source?.uri || `https://www.google.com/maps/search/?api=1&query=${query}`,
     openingHours: [],
     matchScore: Math.round(clamp(Number(item.score || 78), 1, 99)),
@@ -133,31 +140,11 @@ function normalize(item, sources, input, index) {
   };
 }
 
-function findSource(title, sources) {
-  const needle = normalizeText(title);
-  if (!needle) return null;
-  return sources.find(s => {
-    const hay = normalizeText(s.title);
-    return hay.includes(needle) || needle.includes(hay);
-  }) || null;
-}
-
-function parseJson(text) {
-  const clean = String(text || "").replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  try { return JSON.parse(clean); } catch {}
-  const start = clean.indexOf("{");
-  const end = clean.lastIndexOf("}");
-  if (start >= 0 && end > start) {
-    try { return JSON.parse(clean.slice(start, end + 1)); } catch {}
-  }
-  return null;
-}
-
-function validate(input) {
-  if (!Number.isFinite(Number(input.latitude)) || !Number.isFinite(Number(input.longitude))) throw new Error("Localização inválida.");
-  if (!['restaurant','family'].includes(input.domain || 'restaurant')) throw new Error("Domínio de decisão inválido.");
-}
-function labelIntent(intent) { return ({ eat:"restaurants", coffee:"cafés", drink:"bars", dessert:"dessert places", surprise:"food and drink places" })[intent] || "restaurants"; }
+function safeUrl(value) { try { const u = new URL(String(value || "")); return ["http:", "https:"].includes(u.protocol) ? u.toString() : ""; } catch { return ""; } }
+function findSource(title, sources) { const needle = normalizeText(title); if (!needle) return null; return sources.find(s => { const hay = normalizeText(s.title); return hay.includes(needle) || needle.includes(hay); }) || null; }
+function parseJson(text) { const clean = String(text || "").replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim(); try { return JSON.parse(clean); } catch {} const start = clean.indexOf("{"); const end = clean.lastIndexOf("}"); if (start >= 0 && end > start) { try { return JSON.parse(clean.slice(start, end + 1)); } catch {} } return null; }
+function validate(input) { if (!Number.isFinite(Number(input.latitude)) || !Number.isFinite(Number(input.longitude))) throw new Error("Localização inválida."); if (!["restaurant", "family"].includes(input.domain || "restaurant")) throw new Error("Domínio de decisão inválido."); }
+function labelIntent(intent) { return ({ eat: "restaurants", coffee: "cafés", drink: "bars", dessert: "dessert places", surprise: "food and drink places" })[intent] || "restaurants"; }
 function readGeminiError(data, status) { return `Gemini ${status}: ${data?.error?.message || "pedido recusado"}`; }
 function normalizeText(v) { return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
 function slug(v) { return normalizeText(v).replace(/ /g, "-").slice(0, 48); }

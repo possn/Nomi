@@ -28,6 +28,6 @@ Abrir o endereço do Worker no browser. Deve devolver:
   "ok": true,
   "service": "OneArete Decision Engine",
   "product": "Nomi",
-  "version": "3.0.1"
+  "version": "3.1.0"
 }
 ```
