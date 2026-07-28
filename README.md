@@ -1,25 +1,21 @@
-# Nomi v1.2.0 — Live Search + Layout Repair
+# Nomi v1.3.0 — Visual Live Search
 
-Esta versão corrige dois problemas:
+## Alterações
 
-1. O layout aproxima-se do mockup oficial, com tipografia, espaçamento, cartões e cores corrigidos.
-2. Não contém qualquer restaurante pré-gravado. O resultado só aparece depois de uma pesquisa real.
+- Elementos maiores para corresponder melhor ao mockup: títulos, cartões, botões e espaçamentos.
+- Distância máxima aumentada para 60 minutos.
+- Pesquisa real até aproximadamente 50 km.
+- Fotografias reais quando o OpenStreetMap ou o fornecedor disponibiliza `image` ou `wikimedia_commons`.
+- Suporte a fotografias devolvidas pelo proxy Google Places.
+- Ligações diretas para o site do restaurante e para o Google Maps.
+- Botão de menu funcional com Explorar, Favoritos, Decisões, Perfil e limpeza de dados.
+- Nenhum restaurante é pré-gravado.
 
-## Pesquisa
-
-- Pede autorização de localização no Safari.
-- Pesquisa restaurantes e cafés próximos em OpenStreetMap/Overpass.
-- Tenta três servidores Overpass para maior disponibilidade.
-- Pode usar Google Places através de um proxy seguro configurado em `config.js`.
-- Em caso de falha, apresenta erro; nunca mostra “Casa Mia” nem resultados simulados.
-
-## Atualização obrigatória
+## Atualização
 
 Substituir todo o conteúdo do repositório por este ZIP.
 
-O `index.html` usa `?v=1.2.0` para evitar que o Safari carregue ficheiros antigos.
+Abrir depois:
+`https://possn.github.io/Nomi/?v=1.3.0`
 
-Depois da publicação:
-- fechar a janela da app;
-- abrir novamente `https://possn.github.io/Nomi/?v=1.2.0`;
-- confirmar em Perfil que aparece “Versão 1.2.0”.
+Em Perfil deve aparecer a versão atual após atualização do campo de versão numa próxima revisão visual.
