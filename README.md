@@ -1,32 +1,52 @@
-# Nomi v1.7.0 — Persistent Navigation and Learning
+# Nomi v1.8.0 — Google Places Engine
 
-## Alterações
+## O problema corrigido
 
-- Footer mais baixo e compacto.
-- Footer persistente em todos os ecrãs.
-- Acesso permanente a Explorar, Favoritos, Decisões e Perfil.
-- Conteúdo reposicionado para não ficar tapado pelo footer.
-- Navegação e renderização simplificadas.
+O OpenStreetMap consegue localizar estabelecimentos, mas não fornece de forma consistente:
 
-## Próximo passo introduzido
+- avaliações;
+- número de opiniões;
+- fotografias reais;
+- preço;
+- ambiente romântico;
+- qualidade;
+- reservas;
+- informação rica sobre o local.
 
-A Nomi começa a aprender com o utilizador.
+Por isso apresentava opções próximas, mas pouco qualificadas.
 
-No resultado surge o botão:
+## Novo motor
 
-`Já fui · ensinar a Nomi`
+Esta versão inclui um backend Cloudflare Worker em `/worker` que usa:
 
-O utilizador pode indicar:
+- Google Places Text Search (New);
+- pesquisas múltiplas relacionadas com mood e preferências;
+- fotografias reais do Google Places;
+- rating e número de opiniões;
+- preço;
+- distância;
+- reservas, esplanada, vinho, crianças e acessibilidade;
+- ranking contextual próprio da Nomi.
 
-- Gostei desta escolha.
-- Não era para mim.
+Exemplo: “restaurante romântico, até 100 €, vista, num raio de 50 km” deixa de ser apenas uma pesquisa por proximidade.
 
-O feedback é guardado localmente e passa a influenciar o ranking das pesquisas seguintes.
+## Interface
 
-## Atualização
+- Footer mais compacto.
+- Espaço inferior aumentado nos resultados.
+- Botão “Decide por mim” já não fica coberto.
+- Resultados indicam se estão a usar:
+  - Google Places premium; ou
+  - OpenStreetMap limitado.
+
+## Ficheiros
 
 Substituir todo o conteúdo do repositório por este ZIP.
 
+Depois configurar o Worker seguindo:
+
+`worker/README.md`
+
 Abrir:
 
-`https://possn.github.io/Nomi/?v=1.7.0`
+`https://possn.github.io/Nomi/?v=1.8.0`

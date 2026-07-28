@@ -362,3 +362,52 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
 .feedback-good{border:0;background:var(--sage);color:#fff}
 .feedback-bad{border:0;background:var(--coral);color:#fff}
 .feedback-later{border:1px solid var(--line);background:#fff;color:var(--text)}
+
+
+/* v1.8 — footer overlap and premium search result repairs */
+.persistent-nav{
+  bottom:max(6px,env(safe-area-inset-bottom));
+  min-height:62px;
+  border-radius:21px;
+  padding:6px 7px 7px;
+}
+.persistent-nav button{font-size:10px}
+.persistent-nav .ni{font-size:20px}
+.content,.flow,.list{
+  padding-bottom:max(104px,calc(env(safe-area-inset-bottom) + 88px))
+}
+.results{
+  padding-bottom:max(220px,calc(env(safe-area-inset-bottom) + 200px))
+}
+.results>.cta{
+  margin-bottom:72px;
+}
+.results>.note{
+  margin-bottom:12px;
+}
+.maincard{
+  min-height:540px;
+}
+.maincard .card-copy{
+  padding-top:92px;
+}
+.maincard .badge{
+  top:16px!important;
+  right:16px!important;
+}
+.alt.with-photo{
+  min-height:132px;
+}
+.alt-photo{
+  width:98px;
+  height:92px;
+}
+.search-mode-banner{
+  border-radius:16px;
+  padding:12px 14px;
+  margin-bottom:12px;
+  background:var(--sage-soft);
+  color:#496347;
+  font-size:13px;
+  line-height:1.4;
+}

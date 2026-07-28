@@ -1,17 +1,22 @@
-# Nomi v1.7.0
+# Nomi v1.8.0
 
 ## Substituir no GitHub
 Substituir todo o conteúdo do repositório.
 
-## Reparações
-- Footer reduzido.
-- Footer persistente em todos os ecrãs.
-- Espaçamento inferior corrigido.
-- Navegação otimizada.
-
 ## Novo
-- Feedback pós-decisão.
-- Aprendizagem local.
-- Ranking futuro influenciado por gostos e rejeições.
-- Perfil mostra o número de feedbacks.
-- Versão 1.7.0.
+- Motor Google Places via Cloudflare Worker.
+- Text Search com consultas contextuais.
+- Fotografias reais.
+- Ratings e quantidade de opiniões.
+- Preço e atributos do restaurante.
+- Ranking Nomi por mood, orçamento, distância e preferências.
+- Pasta `/worker` com implementação e instruções.
+
+## Reparações
+- Footer mais compacto.
+- Reserva de espaço inferior nos resultados.
+- CTA e texto deixam de ficar sobrepostos.
+- Removida a pesquisa de imagens Wikimedia irrelevantes.
+
+## Configuração necessária
+Seguir `worker/README.md` e colocar o URL do Worker em `config.js`.

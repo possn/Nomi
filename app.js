@@ -456,43 +456,43 @@ async function nominatimFallback(loc,lastError){
 }
 
 async function google(proxy,loc){
-  const r=await fetchWithTimeout(proxy,{
+  const response=await fetchWithTimeout(proxy,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       latitude:loc.lat,
       longitude:loc.lon,
-      radiusMeters:Math.min(50000,Math.max(1200,state.distance*700)),
+      radiusMeters:Math.min(50000,Math.max(1500,state.distance*700)),
       intent:state.intent,
       mood:state.mood,
       budget:state.budget,
       preferences:state.prefs,
       maxResults:12
     })
-  },16000);
-  if(!r.ok) throw new Error('O serviço Google Places não respondeu.');
-  const j=await r.json();
-  return (j.places||j.results||[]).map((p,i)=>{
-    const name=p.displayName?.text||p.name;
-    return {
-      id:p.id||p.placeId||`g${i}`,
-      name,
-      cuisine:p.primaryTypeDisplayName?.text||p.primaryType||'Restaurante',
-      lat:p.location?.latitude||p.lat,
-      lon:p.location?.longitude||p.lon,
-      distanceKm:p.distanceKm||0,
-      address:p.formattedAddress||'',
-      score:p.matchScore||Math.max(70,96-i*3),
-      rating:p.rating,
-      userRatingCount:p.userRatingCount,
-      matchDetails:p.matchDetails||[],
-      imageUrl:p.photoUrl||p.imageUrl||'',
-      actualPhoto:Boolean(p.photoUrl||p.imageUrl),
-      website:p.websiteUri||p.website||'',
-      googleUrl:p.googleMapsUri||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name||'Restaurante')}`,
-      openingHours:p.currentOpeningHours?.weekdayDescriptions?.join(' · ')||''
-    };
-  });
+  },22000);
+
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'O motor Google Places não respondeu.');
+
+  return (data.places||[]).map((p,i)=>({
+    id:p.id||`google-${i}`,
+    name:p.name,
+    cuisine:p.cuisine||'Restaurante',
+    lat:p.lat,
+    lon:p.lon,
+    distanceKm:Number(p.distanceKm||0),
+    address:p.address||'',
+    score:Number(p.matchScore||80),
+    rating:p.rating||null,
+    userRatingCount:p.userRatingCount||0,
+    matchDetails:p.matchDetails||[],
+    imageUrl:p.imageUrl||'',
+    actualPhoto:Boolean(p.imageUrl),
+    website:p.website||'',
+    googleUrl:p.googleUrl||'',
+    openingHours:p.openingHours||[],
+    priceLevel:p.priceLevel||null
+  }));
 }
 
 
@@ -535,7 +535,7 @@ async function search(){
     const loc={lat:p.coords.latitude,lon:p.coords.longitude};
     const proxy=window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL;
     state.results=proxy?await google(proxy,loc):await overpass(loc);
-    state.results=await enrichPhotos(state.results);
+    
     state.provider=proxy?'Google Places':'OpenStreetMap';
     if(!state.results.length) throw new Error('Não encontrei opções nesta distância. Aumenta o raio e tenta novamente.');
 
@@ -581,10 +581,14 @@ function error(){
 
 function map(r){return `https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=18/${r.lat}/${r.lon}`}
 function why(r){
-  const m=(state.mood||'especial').toLowerCase();
+  const mood=(state.mood||'especial').toLowerCase();
   const details=(r.matchDetails||[]).slice(0,3);
-  const reason=details.length?details.join(', '):'proximidade e contexto';
-  return `A Nomi escolheu este para ${intentLabels[state.intent].toLowerCase()}, num momento ${m}, porque combina ${reason} e fica a ${r.distanceKm.toFixed(1)} km.`;
+  const evidence=[];
+  if(r.rating)evidence.push(`avaliação ${Number(r.rating).toFixed(1)}`);
+  if(r.userRatingCount)evidence.push(`${r.userRatingCount} opiniões`);
+  evidence.push(...details);
+  const reason=evidence.length?evidence.slice(0,4).join(', '):'proximidade e contexto';
+  return `A Nomi escolheu este para ${intentLabels[state.intent].toLowerCase()}, num momento ${mood}, com base em ${reason}. Fica a ${r.distanceKm.toFixed(1)} km.`;
 }
 function isFav(id){return state.favorites.some(x=>x.id===id)}
 function fav(id){
@@ -642,6 +646,9 @@ function result(){
       <button class="icon-btn" onclick="search()" aria-label="Pesquisar novamente">↻</button>
     </div>
 
+    <div class="search-mode-banner">${state.provider==='Google Places'
+      ?'Pesquisa premium: Google Places, avaliações, fotografias, preço e relevância contextual.'
+      :'Modo limitado OpenStreetMap. Para resultados realmente qualificados, ativa o Worker Google Places incluído no ZIP.'}</div>
     <article class="maincard has-photo clickable-result" ${bg}
       onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">
       <div class="badge">♥ ${f.score}%<br>match</div>
@@ -678,7 +685,7 @@ function result(){
 
     <button class="cta" onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">🎲 Decide por mim</button>
     <div class="note">
-      Resultados ao vivo via ${state.provider}.
+      Resultados ao vivo via ${state.provider}.${state.provider==='OpenStreetMap'?' Para pesquisa premium, configure o Worker Google Places incluído no ZIP.':''}
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
       Fotografias públicas são procuradas automaticamente; quando não existem, aparece uma imagem de localização.
     </div>
@@ -717,9 +724,9 @@ function profile(){
       <div><span>Nome</span><b>Pedro</b></div>
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
-      <div><span>Pesquisa</span><b>Ao vivo e contextual</b></div>
+      <div><span>Pesquisa</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'Google Places':'OpenStreetMap limitado'}</b></div>
       <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
-      <div><span>Versão</span><b>1.7.0</b></div>
+      <div><span>Versão</span><b>1.8.0</b></div>
     </div>
   </section></div></main>`;
 }
