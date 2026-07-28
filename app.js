@@ -1,14 +1,16 @@
 
 function dismissStartupSplash(){
-  const removeSplash=()=>{
-    const splash=document.getElementById('startupSplash');
-    if(!splash)return;
+  const splash=document.getElementById('startupSplash');
+  if(!splash)return;
+  window.setTimeout(()=>splash.classList.add('show-copy'),1250);
+  window.setTimeout(()=>{
     splash.classList.add('hide');
-    window.setTimeout(()=>splash.remove(),450);
-  };
-  window.setTimeout(removeSplash,1700);
-  window.setTimeout(removeSplash,3200);
-  window.addEventListener('pageshow',()=>window.setTimeout(removeSplash,120),{once:true});
+    window.setTimeout(()=>splash.remove(),650);
+  },4100);
+  window.setTimeout(()=>{
+    const stuck=document.getElementById('startupSplash');
+    if(stuck){stuck.classList.add('hide');window.setTimeout(()=>stuck.remove(),300);}
+  },5600);
 }
 
 
@@ -464,6 +466,36 @@ async function google(proxy,loc){
   });
 }
 
+
+async function findWikimediaPhoto(place){
+  const query=[place.name,place.address].filter(Boolean).join(' ');
+  if(!query)return '';
+  const url='https://commons.wikimedia.org/w/api.php?action=query&generator=search'
+    +'&gsrnamespace=6&gsrlimit=4&gsrsearch='+encodeURIComponent(query)
+    +'&prop=imageinfo&iiprop=url&iiurlwidth=1000&format=json&origin=*';
+  try{
+    const response=await fetchWithTimeout(url,{headers:{Accept:'application/json'}},7000);
+    if(!response.ok)return '';
+    const data=await response.json();
+    const pages=Object.values(data.query?.pages||{});
+    const preferred=pages.find(p=>/restaurant|cafe|bar|food|interior|exterior/i.test(p.title||''))||pages[0];
+    return preferred?.imageinfo?.[0]?.thumburl||preferred?.imageinfo?.[0]?.url||'';
+  }catch(e){return ''}
+}
+
+async function enrichPhotos(items){
+  const enriched=[];
+  for(const item of items.slice(0,8)){
+    if(item.actualPhoto&&item.imageUrl){
+      enriched.push(item);
+      continue;
+    }
+    const photo=await findWikimediaPhoto(item);
+    enriched.push(photo?{...item,imageUrl:photo,actualPhoto:true}:{...item});
+  }
+  return [...enriched,...items.slice(8)];
+}
+
 async function search(){
   state.screen='searching';
   state.error='';
@@ -474,6 +506,7 @@ async function search(){
     const loc={lat:p.coords.latitude,lon:p.coords.longitude};
     const proxy=window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL;
     state.results=proxy?await google(proxy,loc):await overpass(loc);
+    state.results=await enrichPhotos(state.results);
     state.provider=proxy?'Google Places':'OpenStreetMap';
     if(!state.results.length) throw new Error('Não encontrei opções nesta distância. Aumenta o raio e tenta novamente.');
 
@@ -541,13 +574,6 @@ function openExternal(url){
 function result(){
   const [f,...rest]=state.results;
   const bg=f.imageUrl?`style="background-image:url('${String(f.imageUrl).replace(/'/g,"%27")}')"`:'';
-  const cls='maincard has-photo clickable-result';
-  const primaryUrl=f.googleUrl||map(f);
-  const direct=`<div class="direct-links" onclick="event.stopPropagation()">
-    ${f.website?`<a class="website" target="_blank" rel="noopener" href="${f.website}">Site</a>`:''}
-    <a class="google" target="_blank" rel="noopener" href="${primaryUrl}">Google Maps</a>
-  </div>`;
-
   app.innerHTML=`<main class="results">
     <div class="rhead">
       <button class="icon-btn" onclick="setScreen('prefs')" aria-label="Voltar">←</button>
@@ -556,38 +582,44 @@ function result(){
       <button class="icon-btn" onclick="search()" aria-label="Pesquisar novamente">↻</button>
     </div>
 
-    <article class="${cls}" ${bg} onclick="openExternal('${String(primaryUrl).replace(/'/g,"%27")}')" role="link" tabindex="0">
+    <article class="maincard has-photo clickable-result" ${bg}
+      onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">
       <div class="badge">♥ ${f.score}%<br>match</div>
-      <h2>${f.name}</h2>
-      <div class="meta">${f.cuisine}${f.address?` · ${f.address}`:''}</div>
-      <p class="why">${why(f)}</p>
-      <div class="stats">
-        <span>⌖ ${f.distanceKm.toFixed(1)} km</span>
-        ${f.rating?`<span>★ ${f.rating}${f.userRatingCount?` (${f.userRatingCount})`:''}</span>`:''}
-        <button class="fav" onclick="event.stopPropagation();fav('${f.id}')">${isFav(f.id)?'♥':'♡'}</button>
+      <div class="card-copy">
+        <h2>${f.name}</h2>
+        <div class="meta">${f.cuisine}${f.address?` · ${f.address}`:''}</div>
+        <p class="why">${why(f)}</p>
+        <div class="stats">
+          <span>⌖ ${f.distanceKm.toFixed(1)} km</span>
+          ${f.rating?`<span>★ ${f.rating}${f.userRatingCount?` (${f.userRatingCount})`:''}</span>`:''}
+          <button class="fav" onclick="event.stopPropagation();fav('${f.id}')">${isFav(f.id)?'♥':'♡'}</button>
+        </div>
+        <div class="direct-links" onclick="event.stopPropagation()">
+          ${f.website?`<a class="website" target="_blank" rel="noopener" href="${f.website}">Site</a>`:''}
+          <a class="google" target="_blank" rel="noopener" href="${f.googleUrl||map(f)}">Google Maps</a>
+        </div>
+        <div class="tap-hint">Toca no cartão para abrir no Google Maps</div>
       </div>
-      ${direct}
-      <div class="tap-hint">Toca no cartão para abrir no Google Maps</div>
     </article>
 
     <h3 class="sectiontitle">Outras excelentes opções</h3>
-    ${rest.slice(0,5).map(r=>{
-      const url=r.googleUrl||map(r);
-      return `<article class="alt with-photo clickable-alt" onclick="openExternal('${String(url).replace(/'/g,"%27")}')" role="link" tabindex="0">
-        <img class="alt-photo" src="${r.imageUrl}" alt="">
+    ${rest.slice(0,5).map(r=>`
+      <article class="alt with-photo clickable-alt"
+        onclick="window.open('${r.googleUrl||map(r)}','_blank','noopener')">
+        <img class="alt-photo" src="${r.imageUrl}" alt="${r.name}"
+          onerror="this.src='./assets/icon-192.png'">
         <div>
           <h3>${r.name}</h3>
           <p>${r.cuisine} · ${r.distanceKm.toFixed(1)} km${r.address?` · ${r.address}`:''}</p>
         </div>
         <span class="alt-open">Maps ›</span>
-      </article>`;
-    }).join('')}
+      </article>`).join('')}
 
-    <button class="cta" onclick="openExternal('${String(primaryUrl).replace(/'/g,"%27")}')">🎲 Decide por mim</button>
+    <button class="cta" onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">🎲 Decide por mim</button>
     <div class="note">
       Resultados ao vivo via ${state.provider}.
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
-      Toca em qualquer opção para a abrir diretamente no Google Maps.
+      Fotografias públicas são procuradas automaticamente; quando não existem, aparece uma imagem de localização.
     </div>
   </main>`;
 }
@@ -625,7 +657,7 @@ function profile(){
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
       <div><span>Pesquisa</span><b>Ao vivo e contextual</b></div>
-      <div><span>Versão</span><b>1.5.2</b></div>
+      <div><span>Versão</span><b>1.6.0</b></div>
     </div>
   </section>${nav('profile')}</div></main>`;
 }

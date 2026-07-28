@@ -1,17 +1,27 @@
-# Nomi v1.5.2 — Home, Google Maps and Readability
+# Nomi v1.6.0 — Splash, Footer and Photos
 
 ## Alterações
 
-- Botão Home no cabeçalho dos resultados.
-- Texto maior no cartão principal e nas alternativas.
-- Toda a área de cada resultado é clicável.
-- Tocar em qualquer opção abre diretamente o respetivo local no Google Maps.
-- “Decide por mim” abre a recomendação principal no Google Maps.
-- Badge de match corrigido para não ocupar a largura do cartão.
-- Perfil mostra a versão 1.5.2.
+- Ecrã inicial prolongado para cerca de 4 segundos.
+- O símbolo aparece primeiro.
+- O nome e o slogan surgem depois, com animação faseada.
+- Footer reposicionado acima da barra do browser no iPhone.
+- Footer mantém função real:
+  - Explorar
+  - Favoritos
+  - Decisões
+  - Perfil
+- Percentagem de match volta ao canto superior direito e deixa de sobrepor o texto.
+- Texto principal e alternativas maiores.
+- Fotografias públicas pesquisadas automaticamente na Wikimedia Commons.
+- Quando não existe fotografia pública, mantém-se uma imagem da localização.
+- Cartão principal e cada alternativa abrem diretamente no Google Maps.
 
 ## Atualização
 
 Substituir todo o conteúdo do repositório por este ZIP.
 
-Abrir: `https://possn.github.io/Nomi/?v=1.5.2`
+Abrir:
+`https://possn.github.io/Nomi/?v=1.6.0`
+
+Em Perfil deve aparecer `Versão 1.6.0`.

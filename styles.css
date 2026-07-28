@@ -237,3 +237,71 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
 .clickable-result:active,.clickable-alt:active{transform:scale(.992)}
 .results>.cta{font-size:19px;min-height:64px;margin-top:18px}
 .note{font-size:12px;line-height:1.45}
+
+
+/* v1.6 — staged splash, visible footer and clean result card */
+.startup-content img{
+  opacity:0;transform:scale(.86);
+  animation:nomiLogoIn .8s .15s cubic-bezier(.2,.8,.2,1) forwards;
+}
+.startup-name,.startup-tagline{
+  opacity:0;transform:translateY(12px);
+  transition:opacity .65s ease,transform .65s ease;
+}
+.startup-splash.show-copy .startup-name,
+.startup-splash.show-copy .startup-tagline{
+  opacity:1;transform:translateY(0)
+}
+.startup-splash.show-copy .startup-tagline{transition-delay:.18s}
+@keyframes nomiLogoIn{
+  to{opacity:1;transform:scale(1)}
+}
+.startup-splash{animation:none!important}
+.startup-splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+
+.nav{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:max(84px,calc(env(safe-area-inset-bottom) + 70px));
+  width:min(100%,480px);
+  z-index:30;
+  border:1px solid rgba(225,216,207,.9);
+  border-radius:22px 22px 0 0;
+  box-shadow:0 -12px 28px rgba(30,22,17,.08);
+  padding:10px 8px 12px;
+}
+.nav button{font-size:12px}
+.nav .ni{font-size:25px}
+.content{padding-bottom:190px}
+
+.maincard .badge{
+  position:absolute!important;
+  top:18px!important;
+  right:18px!important;
+  width:auto!important;
+  max-width:112px!important;
+  z-index:6!important;
+  border-radius:16px;
+  padding:10px 13px;
+  font-size:15px;
+  line-height:1.12
+}
+.maincard .card-copy{
+  position:relative!important;
+  z-index:4!important;
+  width:100%
+}
+.maincard h2{padding-right:0}
+.maincard .meta{font-size:18px}
+.maincard .why{font-size:19px}
+.maincard .stats{font-size:16px}
+.maincard .direct-links a{font-size:16px}
+.alt-photo{object-fit:cover}
+.results{padding-bottom:150px}
+.note{font-size:13px}
+
+@media(max-height:760px){
+  .nav{bottom:max(74px,calc(env(safe-area-inset-bottom) + 58px))}
+  .content{padding-bottom:170px}
+}
