@@ -133,3 +133,75 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
 .drawer button{width:100%;min-height:52px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;font-size:16px;font-weight:650;padding:0 4px}
 .drawer .close{position:absolute;right:16px;top:calc(env(safe-area-inset-top) + 15px);width:40px;border:0;font-size:26px}
 .drawer-note{margin-top:22px;color:var(--muted);font-size:13px;line-height:1.45}
+
+/* v1.4 — iPhone browser-toolbar clearance and result-image resilience */
+.flow{padding-bottom:max(calc(env(safe-area-inset-bottom) + 22px),110px)}
+.results{padding-bottom:max(calc(env(safe-area-inset-bottom) + 24px),120px)}
+.nav{padding-bottom:max(calc(env(safe-area-inset-bottom) + 8px),18px)}
+.maincard.has-photo{background-color:#211a16;background-size:cover;background-position:center}
+.maincard.has-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06) 25%,rgba(0,0,0,.88) 100%)}
+.maincard.has-photo>*{position:relative;z-index:2}
+.alt-photo{background:#ece7df}
+.intent-chip{display:inline-flex;border-radius:999px;background:var(--coral-soft);color:#a34638;padding:6px 10px;font-size:11px;font-weight:750}
+
+
+/* v1.5 — startup splash + mockup-centered composition */
+.startup-splash{
+  position:fixed;inset:0;z-index:9999;background:#090909;
+  display:grid;place-items:center;transition:opacity .45s ease,visibility .45s ease;
+}
+.startup-splash.hide{opacity:0;visibility:hidden}
+.startup-content{text-align:center;color:#fff;transform:translateY(-1vh)}
+.startup-content img{
+  width:min(46vw,220px);height:min(46vw,220px);
+  border-radius:26%;display:block;margin:0 auto 28px;
+  box-shadow:0 24px 70px rgba(0,0,0,.35)
+}
+.startup-name{font-size:42px;line-height:1;font-weight:760;letter-spacing:-1.2px}
+.startup-tagline{font-size:21px;line-height:1.32;margin-top:15px;font-weight:430}
+
+.shell{max-width:480px}
+.content{
+  display:flex;flex-direction:column;
+  padding-left:26px;padding-right:26px;
+}
+.top{flex:0 0 auto}
+.greeting{margin-top:22px}
+.hero{margin-bottom:22px}
+.actions{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  gap:11px;padding:4px 0 8vh
+}
+.action{
+  min-height:66px;border-radius:20px;font-size:18px;
+  padding:0 19px;gap:16px
+}
+.action .e{font-size:25px;width:30px}
+.flow{
+  max-width:480px;
+  padding-left:24px;padding-right:24px;
+}
+.flow .grid{
+  width:100%;
+}
+.flow .grid:not(.compact){
+  margin-top:8px;
+}
+.flow .choice{
+  min-height:126px;
+}
+.flow .grid.compact{
+  margin-top:4px;
+}
+.flow .choice.compact{
+  min-height:58px;
+}
+.flow .flex{min-height:18px}
+.flow .cta{
+  margin-top:20px;
+}
+@media(max-height:760px){
+  .actions{padding-bottom:3vh}
+  .action{min-height:58px}
+  .flow .choice{min-height:106px}
+}

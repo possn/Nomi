@@ -1,21 +1,24 @@
-# Nomi v1.3.0 — Visual Live Search
+# Nomi v1.5.0 — Splash and Centered Flow
 
 ## Alterações
 
-- Elementos maiores para corresponder melhor ao mockup: títulos, cartões, botões e espaçamentos.
-- Distância máxima aumentada para 60 minutos.
-- Pesquisa real até aproximadamente 50 km.
-- Fotografias reais quando o OpenStreetMap ou o fornecedor disponibiliza `image` ou `wikimedia_commons`.
-- Suporte a fotografias devolvidas pelo proxy Google Places.
-- Ligações diretas para o site do restaurante e para o Google Maps.
-- Botão de menu funcional com Explorar, Favoritos, Decisões, Perfil e limpeza de dados.
-- Nenhum restaurante é pré-gravado.
+- Novo ecrã de abertura durante cerca de 2 segundos.
+- Mostra o ícone oficial Nomi, nome e slogan:
+  - Stop searching.
+  - Start deciding.
+- Home reorganizada para se aproximar do mockup:
+  - opções maiores;
+  - cartões quase a ocupar toda a largura;
+  - conjunto de opções centrado verticalmente;
+  - maior presença visual.
+- Mood e restantes passos com caixas maiores e composição mais central.
+- Mantém o motor de pesquisa contextual da v1.4.0.
 
 ## Atualização
 
 Substituir todo o conteúdo do repositório por este ZIP.
 
-Abrir depois:
-`https://possn.github.io/Nomi/?v=1.3.0`
+Abrir:
+`https://possn.github.io/Nomi/?v=1.5.0`
 
-Em Perfil deve aparecer a versão atual após atualização do campo de versão numa próxima revisão visual.
+Em Perfil deve continuar visível a versão 1.4.0 até à próxima atualização funcional do motor; esta release é predominantemente visual.

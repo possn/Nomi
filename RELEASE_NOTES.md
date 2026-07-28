@@ -1,11 +1,13 @@
-# Nomi v1.3.0
+# Nomi v1.5.0
 
+## Substituir no GitHub
 Substituir todo o conteúdo do repositório.
 
-## Principais correções
-- Escala visual aumentada.
-- Menu hambúrguer funcional.
-- Pesquisa até 60 minutos.
-- Fotografias de restaurantes quando disponíveis.
-- Ligações diretas para site/Google Maps.
-- Continuidade da pesquisa ao vivo, sem restaurantes simulados.
+## Novo
+- Splash inicial Nomi com ícone, nome e slogan.
+- Home com botões maiores, centrados e quase a ocupar toda a largura.
+- Mood e restantes passos com boxes maiores.
+- Cache busting 1.5.0.
+
+## Ficheiro novo
+- assets/startup-splash.png
