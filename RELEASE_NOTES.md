@@ -1,13 +1,20 @@
-# Release Notes — Nomi v3.0.1
+# Nomi v3.1.0 — ODE Live Decision Integration
 
-## OneArete Decision Engine Foundation
+## Implementado
 
-- Evolução direta da baseline v1.9.0.
-- Splash oficial com assinatura `by OneArete`.
-- Home redesenhada para dois domínios: restaurantes e atividades com miúdos.
-- Fluxo de atividades com seleção de idades, orçamento total, distância e preferências.
-- Cloudflare Worker convertido de Google Places proxy para ODE com Gemini + Google Maps Grounding.
-- Endpoint GET de diagnóstico do Worker.
-- Resposta normalizada para preservar os cartões, favoritos, histórico e links Google Maps existentes.
-- Branding e perfil atualizados para Nomi by OneArete.
-- ZIP com ficheiros na raiz, sem pasta intermédia.
+- Endpoint real `POST /decision` no Cloudflare Worker.
+- Endpoints `GET /health` e `GET /version`.
+- Nomi ligada ao ODE através de `ODE_URL`.
+- Compatibilidade temporária com `GOOGLE_PLACES_PROXY_URL`.
+- Decision Confidence visível nos resultados.
+- Decision Uncertainty para factos que o ODE não conseguiu confirmar.
+- Completion actions: disponibilidade/reserva/bilhetes, calendário e convite.
+- Domínios Restaurantes e Atividades com Miúdos preservados.
+- Branding `by OneArete` preservado.
+
+## Configuração obrigatória
+
+1. Publicar `worker/worker.js` no Worker Cloudflare.
+2. Manter a secret `GEMINI_API_KEY`.
+3. Em `config.js`, preencher `ODE_URL` com o URL do Worker, sem barra final.
+4. Publicar os ficheiros da raiz no GitHub Pages.

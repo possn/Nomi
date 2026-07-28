@@ -516,3 +516,16 @@ body:has(.results) .results>.cta{
 .startup-onearete{margin-top:34px;font-size:.78rem;letter-spacing:.12em;color:rgba(255,255,255,.58);opacity:0;transform:translateY(6px);transition:opacity .7s ease .45s,transform .7s ease .45s}
 .startup-splash.show-copy .startup-onearete{opacity:1;transform:none}
 .GMP-attribution{font-family:Roboto,system-ui,sans-serif;font-size:12px;font-weight:400;color:#5e5e5e;white-space:nowrap}
+
+/* v3.1 — ODE confidence and completion */
+.confidence-panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px 18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(34,25,18,.05)}
+.confidence-panel>div{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.confidence-panel span{font-size:13px;color:var(--muted);font-weight:700}
+.confidence-panel strong{font-size:30px;letter-spacing:-1px}
+.confidence-panel details{margin-top:12px;border-top:1px solid var(--line);padding-top:11px}
+.confidence-panel summary{font-size:13px;font-weight:750;cursor:pointer}
+.confidence-panel ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.45}
+.completion-actions{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px;margin-top:15px}
+.completion-actions a,.completion-actions button{display:flex;align-items:center;justify-content:center;min-height:43px;border:0;border-radius:999px;text-decoration:none;font-size:12px;font-weight:800;padding:0 10px;background:rgba(255,255,255,.16);color:#fff}
+.completion-actions .completion-primary{background:var(--coral);color:#fff}
+@media(max-width:370px){.completion-actions{grid-template-columns:1fr}.completion-actions a,.completion-actions button{min-height:40px}}

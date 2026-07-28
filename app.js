@@ -27,6 +27,8 @@ const state={
   results:[],
   provider:'',
   fallbackNote:'',
+  confidence:null,
+  uncertainty:[],
   favorites:JSON.parse(localStorage.getItem('nomi:favorites')||'[]'),
   history:JSON.parse(localStorage.getItem('nomi:history')||'[]'),
   learned:JSON.parse(localStorage.getItem('nomi:learned')||'{"likes":{},"dislikes":{},"visits":0}')
@@ -483,6 +485,8 @@ async function google(proxy,loc){
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.error||'O OneArete Decision Engine não respondeu.');
 
+  state.confidence=Number(data.confidence||0);
+  state.uncertainty=Array.isArray(data.uncertainty)?data.uncertainty:[];
   return (data.places||[]).map((p,i)=>({
     id:p.id||`google-${i}`,
     name:p.name,
@@ -499,6 +503,8 @@ async function google(proxy,loc){
     actualPhoto:Boolean(p.imageUrl),
     website:p.website||'',
     googleUrl:p.googleUrl||'',
+    reservationUrl:p.reservationUrl||'',
+    ticketUrl:p.ticketUrl||'',
     openingHours:p.openingHours||[],
     priceLevel:p.priceLevel||null
   }));
@@ -573,14 +579,17 @@ async function search(){
   state.screen='searching';
   state.error='';
   state.fallbackNote='';
+  state.confidence=null;
+  state.uncertainty=[];
   render();
   try{
     const p=await geo();
     const loc={lat:p.coords.latitude,lon:p.coords.longitude};
-    const proxy=window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL;
+    const base=(window.NOMI_CONFIG?.ODE_URL||window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL||'').replace(/\/$/,'');
+    const proxy=base?`${base}/decision`:'';
     state.results=proxy?await google(proxy,loc):await overpass(loc);
     
-    state.provider=proxy?'Gemini + Google Maps':'OpenStreetMap';
+    state.provider=proxy?'ODE · Gemini + Google Maps':'OpenStreetMap';
     state.results=strictFilter(state.results);
     if(!state.results.length){
       throw new Error('Não encontrei opções com qualidade suficiente para estes critérios. Experimenta aumentar a distância ou remover uma preferência.');
@@ -683,6 +692,27 @@ function openFeedback(id){
   document.body.appendChild(layer);
 }
 
+function calendarUrl(r){
+  const title=encodeURIComponent(`${state.domain==='family'?'Atividade':'Reserva'} · ${r.name}`);
+  const details=encodeURIComponent(`Escolha Nomi: ${why(r)}\n${r.googleUrl||''}`);
+  const location=encodeURIComponent(r.address||r.name);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
+}
+function shareDecision(r){
+  const text=`A Nomi escolheu ${r.name}. ${r.googleUrl||''}`;
+  if(navigator.share){navigator.share({title:'Nomi',text,url:r.googleUrl||location.href}).catch(()=>{});return;}
+  navigator.clipboard?.writeText(text);toast('Decisão copiada');
+}
+function completionActions(r){
+  const primary=r.reservationUrl||r.ticketUrl||r.website||r.googleUrl||map(r);
+  const label=state.domain==='family'?(r.ticketUrl?'Comprar bilhetes':'Ver atividade'):(r.reservationUrl?'Reservar':'Ver disponibilidade');
+  return `<div class="completion-actions" onclick="event.stopPropagation()">
+    <a class="completion-primary" target="_blank" rel="noopener" href="${primary}">${label}</a>
+    <a target="_blank" rel="noopener" href="${calendarUrl(r)}">Calendário</a>
+    <button onclick="shareDecision(state.results.find(x=>x.id==='${r.id}'))">Convidar</button>
+  </div>`;
+}
+
 function result(){
   const [f,...rest]=state.results;
   const bg=f.imageUrl?`style="background-image:url('${String(f.imageUrl).replace(/'/g,"%27")}')"`:'';
@@ -694,8 +724,9 @@ function result(){
       <button class="icon-btn" onclick="search()" aria-label="Pesquisar novamente">↻</button>
     </div>
 
+    ${state.confidence?`<section class="confidence-panel"><div><span>Decision Confidence</span><strong>${Math.round(state.confidence*100)}%</strong></div>${state.uncertainty.length?`<details><summary>O que ainda não conseguimos confirmar</summary><ul>${state.uncertainty.map(x=>`<li>${x}</li>`).join('')}</ul></details>`:''}</section>`:''}
     <div class="search-mode-banner">
-      <strong>${state.provider==='Gemini + Google Maps'?'Decisão fundamentada em Google Maps':'Pesquisa aproximada OpenStreetMap'}</strong>
+      <strong>${state.provider.startsWith('ODE')?'Decisão fundamentada em Google Maps':'Pesquisa aproximada OpenStreetMap'}</strong>
       <span>${requestSummary()}</span>
       ${state.provider==='OpenStreetMap'
         ?`<a target="_blank" rel="noopener" href="${googleMapsDiscoveryUrl()}">Pesquisar estes critérios no Google Maps</a>`
@@ -717,6 +748,7 @@ function result(){
           ${f.website?`<a class="website" target="_blank" rel="noopener" href="${f.website}">Site</a>`:''}
           <a class="google" target="_blank" rel="noopener" href="${f.googleUrl||map(f)}">Google Maps</a>
         </div>
+        ${completionActions(f)}
         <div class="tap-hint">Toca no cartão para abrir no Google Maps</div>
         <button class="visited-btn" onclick="event.stopPropagation();openFeedback('${f.id}')">Já fui · ensinar a Nomi</button>
       </div>
@@ -737,7 +769,7 @@ function result(){
 
     <button class="cta" onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">🎲 Decide por mim</button>
     <div class="note">
-      Resultados via ${state.provider}.${state.provider==='OpenStreetMap'?' Estes resultados são aproximados; o Google Places é necessário para ratings, fotografias e contexto fiável.':''}
+      Resultados via ${state.provider}.${state.provider==='OpenStreetMap'?' Estes resultados são aproximados; o ODE é necessário para ratings, fotografias e contexto fiável.':''}
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
       Fotografias públicas são procuradas automaticamente; quando não existem, aparece uma imagem de localização.
     </div>
@@ -776,9 +808,9 @@ function profile(){
       <div><span>Nome</span><b>Pedro</b></div>
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
-      <div><span>Motor</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'ODE · Gemini + Google Maps':'Modo local limitado'}</b></div>
+      <div><span>Motor</span><b>${(window.NOMI_CONFIG?.ODE_URL||window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL)?'ODE · Gemini + Google Maps':'Modo local limitado'}</b></div>
       <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
-      <div><span>Produto</span><b>Nomi by OneArete</b></div><div><span>Versão</span><b>3.0.1</b></div>
+      <div><span>Produto</span><b>Nomi by OneArete</b></div><div><span>Versão</span><b>3.1.0</b></div>
     </div>
   </section></div></main>`;
 }

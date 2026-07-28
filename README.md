@@ -1,4 +1,4 @@
-# Nomi v3.0.1 — OneArete Decision Engine Foundation
+# Nomi v3.1.0 — OneArete Decision Engine Foundation
 
 **Stop searching. Start deciding.**  
 **by OneArete**
