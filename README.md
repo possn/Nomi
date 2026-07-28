@@ -1,48 +1,25 @@
-# Nomi v1.1.0 — Live Restaurant Search
+# Nomi v1.2.0 — Live Search + Layout Repair
 
-Esta versão deixa de usar restaurantes gravados no código.
+Esta versão corrige dois problemas:
 
-## Alterações
+1. O layout aproxima-se do mockup oficial, com tipografia, espaçamento, cartões e cores corrigidos.
+2. Não contém qualquer restaurante pré-gravado. O resultado só aparece depois de uma pesquisa real.
 
-- Layout e alinhamentos corrigidos.
-- Mais opções no passo de preferências.
-- Pesquisa real pela localização do utilizador.
-- Pesquisa OpenStreetMap/Overpass por defeito.
-- Suporte preparado para Google Places através de backend/proxy seguro.
-- Resultados mostram nome, cozinha, distância, morada disponível e ligação ao mapa.
-- Não inventa ratings quando a fonte não os fornece.
+## Pesquisa
 
-## Google Places
+- Pede autorização de localização no Safari.
+- Pesquisa restaurantes e cafés próximos em OpenStreetMap/Overpass.
+- Tenta três servidores Overpass para maior disponibilidade.
+- Pode usar Google Places através de um proxy seguro configurado em `config.js`.
+- Em caso de falha, apresenta erro; nunca mostra “Casa Mia” nem resultados simulados.
 
-Para usar Google Places, configure em `config.js` o URL de um backend/proxy seguro:
+## Atualização obrigatória
 
-```js
-window.NOMI_CONFIG = {
-  GOOGLE_PLACES_PROXY_URL: "https://o-teu-backend.example/search"
-};
-```
+Substituir todo o conteúdo do repositório por este ZIP.
 
-Não colocar uma chave Google diretamente no JavaScript público do GitHub Pages.
+O `index.html` usa `?v=1.2.0` para evitar que o Safari carregue ficheiros antigos.
 
-## Atualização do GitHub
-
-Substituir:
-- `index.html`
-- `styles.css`
-- `app.js`
-- `README.md`
-- `RELEASE_NOTES.md`
-
-Adicionar:
-- `config.js`
-
-Remover:
-- `assets/casa-mia.jpg`
-- `assets/osteria.jpg`
-- `assets/luce.jpg`
-
-Manter:
-- `assets/icon-192.png`
-- `assets/icon-512.png`
-- `manifest.webmanifest`
-- `.nojekyll`
+Depois da publicação:
+- fechar a janela da app;
+- abrir novamente `https://possn.github.io/Nomi/?v=1.2.0`;
+- confirmar em Perfil que aparece “Versão 1.2.0”.

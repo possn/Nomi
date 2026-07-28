@@ -1,22 +1,17 @@
-# Nomi v1.1.0 — Layout Repair + Live Search
+# Nomi v1.2.0
 
-## Ficheiros a substituir
-- index.html
-- styles.css
-- app.js
-- README.md
-- RELEASE_NOTES.md
+## Substituir no GitHub
+Substituir todo o conteúdo do repositório.
 
-## Ficheiro novo
-- config.js
+## Correções
+- Remoção total de restaurantes simulados.
+- Pesquisa geolocalizada real.
+- Fallback entre três servidores Overpass.
+- Cache busting para impedir carregamento da v1.0 antiga.
+- `404.html` adicionado.
+- Botões com texto preto em vez de azul.
+- Grelhas, alturas e alinhamentos corrigidos.
+- Layout mais próximo do mockup oficial.
 
-## Ficheiros a remover
-- assets/casa-mia.jpg
-- assets/osteria.jpg
-- assets/luce.jpg
-
-## Preservar
-- assets/icon-192.png
-- assets/icon-512.png
-- manifest.webmanifest
-- .nojekyll
+## Verificação
+Em Perfil deve aparecer: Versão 1.2.0.
