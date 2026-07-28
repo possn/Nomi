@@ -1,0 +1,22 @@
+NOMI v3.0.1 — FICHEIROS A SUBSTITUIR NO GITHUB
+
+Substituir na raiz do repositório:
+- index.html
+- 404.html
+- app.js
+- styles.css
+- config.js
+- manifest.webmanifest
+- README.md
+- RELEASE_NOTES.md
+- .nojekyll
+
+Substituir/adicionar a pasta:
+- assets/
+
+NÃO colocar no GitHub como código da página:
+- worker/worker.js
+
+O conteúdo de worker/worker.js deve ser colado no editor do Cloudflare Worker e publicado com Deploy.
+
+Antes do upload para o GitHub, editar config.js e colocar o URL real do Worker.

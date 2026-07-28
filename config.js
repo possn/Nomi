@@ -1,6 +1,5 @@
 window.NOMI_CONFIG = {
-  // Cole aqui o URL do Cloudflare Worker incluído na pasta /worker.
-  // Sem este URL, a app usa o modo OpenStreetMap, que tem menos avaliações,
-  // fotografias e informação de ambiente/preço.
+  // Cola aqui o endereço completo do Worker, sem barra final.
+  // Exemplo: https://nomi-decision-engine.nome.workers.dev
   GOOGLE_PLACES_PROXY_URL: ""
 };

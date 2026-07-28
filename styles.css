@@ -504,3 +504,15 @@ body:has(.results) .results>.cta{
   color:#345b35;
   text-decoration:underline;
 }
+
+/* Nomi v3 · OneArete Decision Engine */
+.domain-actions{gap:16px;margin-top:34px}
+.domain-card{min-height:112px;text-align:left;justify-content:flex-start;padding:20px 22px}
+.domain-card>span:last-child{display:flex;flex-direction:column;gap:5px}
+.domain-card b{font-size:1.12rem}
+.domain-card small{font-size:.82rem;line-height:1.35;opacity:.72;font-weight:500}
+.onearete-home{text-align:center;margin:28px 0 6px;font-size:.78rem;color:#8c877f;letter-spacing:.02em}
+.onearete-home span{font-weight:700;color:#5d5953}
+.startup-onearete{margin-top:34px;font-size:.78rem;letter-spacing:.12em;color:rgba(255,255,255,.58);opacity:0;transform:translateY(6px);transition:opacity .7s ease .45s,transform .7s ease .45s}
+.startup-splash.show-copy .startup-onearete{opacity:1;transform:none}
+.GMP-attribution{font-family:Roboto,system-ui,sans-serif;font-size:12px;font-weight:400;color:#5e5e5e;white-space:nowrap}

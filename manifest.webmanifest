@@ -1,7 +1,7 @@
 {
   "name": "Nomi",
   "short_name": "Nomi",
-  "description": "Stop searching. Start deciding.",
+  "description": "Nomi by OneArete — decide onde comer e o que fazer com os miúdos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

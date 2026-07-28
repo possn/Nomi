@@ -1,49 +1,27 @@
-# Nomi v1.9.0 — Search Quality and Footer Repair
+# Nomi v3.0.1 — OneArete Decision Engine Foundation
 
-## Footer
+**Stop searching. Start deciding.**  
+**by OneArete**
 
-Nos resultados, o footer deixa de flutuar sobre os cartões.
+Esta versão parte diretamente da Nomi v1.9.0 e preserva o seu design, navegação, favoritos, histórico, PWA e fluxo visual. Acrescenta o primeiro núcleo funcional do OneArete Decision Engine (ODE).
 
-Passa a aparecer no fim da página, depois do conteúdo e dos botões. Nos ecrãs curtos mantém-se compacto e acessível.
+## Domínios incluídos
 
-## Motor de pesquisa
+- Restaurantes, cafés, bebidas e sobremesas.
+- Atividades com miúdos, com idades, orçamento, distância e preferências próprias.
 
-O motor foi refinado para evitar recomendações apenas por proximidade.
+## Motor
 
-### Google Places
+A aplicação envia um pedido estruturado ao Cloudflare Worker. O Worker usa a secret `GEMINI_API_KEY`, ativa Grounding with Google Maps e devolve recomendações compatíveis com a interface existente da Nomi.
 
-O Worker passa a executar várias pesquisas:
+## Configuração rápida
 
-- contexto e mood;
-- avaliação elevada;
-- ocasião especial;
-- restaurante romântico;
-- restaurante com vista, rooftop ou waterfront;
-- cozinha selecionada;
-- nível de preço compatível.
+1. Cloudflare Worker → Edit code.
+2. Substituir o código pelo ficheiro `worker/worker.js`.
+3. Confirmar a secret `GEMINI_API_KEY`.
+4. Deploy.
+5. Abrir o URL do Worker e confirmar a resposta de estado.
+6. Colar esse URL em `config.js`.
+7. Substituir no GitHub os ficheiros indicados em `FILES_TO_REPLACE_IN_GITHUB.txt`.
 
-O ranking penaliza fortemente:
-
-- locais sem sinal de vista quando “Vista” é prioritária;
-- cozinha incompatível;
-- avaliações baixas;
-- pouco volume de opiniões;
-- preço claramente incompatível.
-
-### OpenStreetMap
-
-O modo OpenStreetMap passa a assumir claramente que é aproximado.
-
-Resultados abaixo do nível mínimo de qualidade são removidos. A app fornece ainda um link para pesquisar os critérios exatos no Google Maps.
-
-## Importante
-
-Para obter recomendações realmente boas, fotografias, ratings e contexto, é necessário configurar o Worker Google Places incluído em:
-
-`worker/README.md`
-
-## Atualização
-
-Substituir todo o conteúdo do repositório e abrir:
-
-`https://possn.github.io/Nomi/?v=1.9.0`
+Nunca colocar a chave Gemini no GitHub.

@@ -1,14 +1,13 @@
-# Nomi v1.9.0
+# Release Notes — Nomi v3.0.1
 
-## Correções
+## OneArete Decision Engine Foundation
 
-- Footer deixa de sobrepor resultados.
-- Nos resultados, a navegação passa para o fim da página.
-- Filtro mínimo de qualidade.
-- Pesquisa Google Places com até cinco consultas contextuais.
-- Forte valorização de rating, número de opiniões, mood e preferências.
-- “Romântico + Vista” deixa de ser tratado como simples proximidade.
-- Penalização de cozinha, preço e ambiente incompatíveis.
-- OpenStreetMap identificado como modo aproximado.
-- Link direto para pesquisar os mesmos critérios no Google Maps.
-- Perfil atualizado para 1.9.0.
+- Evolução direta da baseline v1.9.0.
+- Splash oficial com assinatura `by OneArete`.
+- Home redesenhada para dois domínios: restaurantes e atividades com miúdos.
+- Fluxo de atividades com seleção de idades, orçamento total, distância e preferências.
+- Cloudflare Worker convertido de Google Places proxy para ODE com Gemini + Google Maps Grounding.
+- Endpoint GET de diagnóstico do Worker.
+- Resposta normalizada para preservar os cartões, favoritos, histórico e links Google Maps existentes.
+- Branding e perfil atualizados para Nomi by OneArete.
+- ZIP com ficheiros na raiz, sem pasta intermédia.

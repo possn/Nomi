@@ -18,6 +18,7 @@ const app=document.getElementById('app'),toastEl=document.getElementById('toast'
 
 const state={
   screen:'home',
+  domain:'restaurant',
   intent:'eat',
   mood:null,
   budget:30,
@@ -31,17 +32,19 @@ const state={
   learned:JSON.parse(localStorage.getItem('nomi:learned')||'{"likes":{},"dislikes":{},"visits":0}')
 };
 
-const moods=[
+const restaurantMoods=[
   ['❤️','Romântico'],['🙂','Amigos'],['👨‍👩‍👧','Família'],
   ['💼','Trabalho'],['🍃','Relaxado'],['🎉','Celebrar']
 ];
+const familyAges=[['👶','0–3 anos'],['🧒','4–7 anos'],['🎒','8–12 anos'],['🧑','13+ anos'],['👨‍👩‍👧','Idades diferentes'],['✨','Surpreende-nos']];
 
-const prefs=[
+const restaurantPrefs=[
   ['🌅','Vista'],['🅿️','Estacionamento'],['🍷','Vinho'],['🌳','Esplanada'],
   ['🌿','Vegetariano'],['💚','Vegan'],['🧒','Crianças'],['🐕','Cães'],
   ['🍣','Sushi'],['🍝','Massa'],['🥩','Carne'],['🐟','Peixe'],
   ['🤫','Silêncio'],['♿','Acessível'],['🌙','Aberto agora'],['💳','Cartão']
 ];
+const familyPrefs=[['🏠','Indoor'],['🌳','Outdoor'],['🌿','Natureza'],['🔬','Ciência'],['🐾','Animais'],['🎨','Criativo'],['⚽','Ativo'],['💦','Água'],['☔','Dia de chuva'],['☀️','Bom tempo'],['🍽️','Com refeição'],['♿','Acessível'],['🅿️','Estacionamento'],['🎟️','Evento hoje'],['🆓','Gratuito'],['⏱️','Meio dia']];
 
 const intentLabels={
   eat:'Comer', coffee:'Café', drink:'Beber um copo', dessert:'Sobremesa', surprise:'Surpreende-me'
@@ -88,21 +91,21 @@ function mountPersistentNav(){
 }
 
 function home(){
-  const actions=[
-    ['🍽️','Comer','primary','eat'],
-    ['☕','Café','','coffee'],
-    ['🍸','Beber um copo','','drink'],
-    ['🍰','Sobremesa','','dessert'],
-    ['🎲','Surpreende-me','sage','surprise']
-  ];
   app.innerHTML=`<main class="screen"><div class="shell"><section class="content">
     <div class="top"><button class="icon-btn menu" onclick="openDrawer()">☰</button><div class="avatar">PN</div></div>
-    <div class="greeting">Boa noite, Pedro 👋</div>
-    <h1 class="hero">O que te apetece<br>fazer hoje?</h1>
-    <div class="actions">${actions.map(([e,l,c,intent])=>`
-      <button class="action ${c}" onclick="start('${intent}')"><span class="e">${e}</span>${l}</button>`).join('')}
+    <div class="greeting">Boa tarde, Pedro 👋</div>
+    <h1 class="hero">O que estás a tentar<br>decidir hoje?</h1>
+    <div class="actions domain-actions">
+      <button class="action primary domain-card" onclick="startDomain('restaurant')"><span class="e">🍽️</span><span><b>Onde comer</b><small>Restaurantes, cafés e ocasiões especiais</small></span></button>
+      <button class="action sage domain-card" onclick="startDomain('family')"><span class="e">👨‍👩‍👧</span><span><b>Atividades com miúdos</b><small>Ideias adequadas às idades, tempo e orçamento</small></span></button>
     </div>
+    <div class="onearete-home">A decision engine <span>by OneArete</span></div>
   </section></div></main>`;
+}
+
+function startDomain(domain){
+  state.domain=domain;
+  start(domain==='family'?'family':'eat');
 }
 
 function start(intent){
@@ -119,22 +122,25 @@ function start(intent){
 }
 
 function mood(){
+  const options=state.domain==='family'?familyAges:restaurantMoods;
+  const titleText=state.domain==='family'?'Que idades têm?':'Qual é o mood?';
+  const subText=state.domain==='family'?'Escolhe a opção que melhor descreve o grupo.':'Escolhe o que melhor descreve este momento.';
   app.innerHTML=`<main class="flow">${head(1,'coral')}
-    <h1 class="title">Qual é o mood?</h1>
-    <p class="sub">Escolhe o que melhor descreve<br>este momento.</p>
-    <div class="grid">${moods.map(([e,l])=>`
+    <h1 class="title">${titleText}</h1>
+    <p class="sub">${subText}</p>
+    <div class="grid">${options.map(([e,l])=>`
       <button class="choice ${state.mood===l?'selected':''}" onclick="state.mood='${l}';render()">
         <span class="ce">${e}</span>${l}
       </button>`).join('')}</div>
     <div class="flex"></div>
-    <button class="cta" onclick="setScreen('budget')">Continuar</button>
+    <button class="cta" ${state.mood?'':'disabled'} onclick="setScreen('budget')">Continuar</button>
   </main>`;
 }
 
 function budget(){
   const a=[10,20,30,50,100];
   app.innerHTML=`<main class="flow">${head(2,'coral')}
-    <h1 class="title">Quanto queres gastar<br>por pessoa?</h1>
+    <h1 class="title">${state.domain==='family'?'Quanto queres gastar<br>no total?':'Quanto queres gastar<br>por pessoa?'}</h1>
     <p class="sub">Arrasta o seletor</p>
     <div class="value">${state.budget} €</div>
     <div class="slider">
@@ -164,17 +170,19 @@ function distance(){
 }
 
 function preferences(){
+  const options=state.domain==='family'?familyPrefs:restaurantPrefs;
   app.innerHTML=`<main class="flow">${head(4,'sage')}
     <h1 class="title">O que é importante<br>para ti hoje?</h1>
     <p class="sub">Podes escolher várias opções</p>
-    <div class="grid compact">${prefs.map(([e,l])=>`
+    <div class="grid compact">${options.map(([e,l])=>`
       <button class="choice compact ${state.prefs.includes(l)?'selected':''}" onclick="toggle('${l}')">
         <span class="ce">${e}</span><span>${l}</span>
       </button>`).join('')}</div>
     <div class="flex"></div>
-    <button class="cta sage" onclick="search()">Pesquisar opções</button>
+    <button class="cta sage" onclick="search()">${state.domain==='family'?'Encontrar atividades':'Pesquisar opções'}</button>
   </main>`;
 }
+
 function toggle(x){
   state.prefs=state.prefs.includes(x)?state.prefs.filter(v=>v!==x):[...state.prefs,x];
   render();
@@ -463,6 +471,7 @@ async function google(proxy,loc){
       latitude:loc.lat,
       longitude:loc.lon,
       radiusMeters:Math.min(50000,Math.max(1500,state.distance*700)),
+      domain:state.domain,
       intent:state.intent,
       mood:state.mood,
       budget:state.budget,
@@ -472,7 +481,7 @@ async function google(proxy,loc){
   },22000);
 
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.error||'O motor Google Places não respondeu.');
+  if(!response.ok)throw new Error(data.error||'O OneArete Decision Engine não respondeu.');
 
   return (data.places||[]).map((p,i)=>({
     id:p.id||`google-${i}`,
@@ -571,7 +580,7 @@ async function search(){
     const proxy=window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL;
     state.results=proxy?await google(proxy,loc):await overpass(loc);
     
-    state.provider=proxy?'Google Places':'OpenStreetMap';
+    state.provider=proxy?'Gemini + Google Maps':'OpenStreetMap';
     state.results=strictFilter(state.results);
     if(!state.results.length){
       throw new Error('Não encontrei opções com qualidade suficiente para estes critérios. Experimenta aumentar a distância ou remover uma preferência.');
@@ -581,6 +590,7 @@ async function search(){
     state.history=[{
       at:new Date().toISOString(),
       restaurant:f.name,
+      domain:state.domain,
       intent:state.intent,
       mood:state.mood||'Especial',
       budget:state.budget,
@@ -599,7 +609,7 @@ function searching(){
   app.innerHTML=`<main class="searching"><div>
     <div class="spinner"></div>
     <h2>A Nomi está a procurar</h2>
-    <p>A pesquisar ${intentLabels[state.intent].toLowerCase()} perto de ti<br>e a comparar as preferências escolhidas.</p>
+    <p>A pesquisar ${state.domain==='family'?'atividades com miúdos':intentLabels[state.intent].toLowerCase()} perto de ti<br>e a comparar as preferências escolhidas.</p>
   </div></main>`;
 }
 
@@ -626,7 +636,7 @@ function why(r){
   if(r.userRatingCount)evidence.push(`${r.userRatingCount} opiniões`);
   evidence.push(...details);
   const reason=evidence.length?evidence.slice(0,4).join(', '):'proximidade e contexto';
-  return `A Nomi escolheu este para ${intentLabels[state.intent].toLowerCase()}, num momento ${mood}, com base em ${reason}. Fica a ${r.distanceKm.toFixed(1)} km.`;
+  return `A Nomi escolheu este para ${state.domain==='family'?'uma atividade em família':intentLabels[state.intent].toLowerCase()}, com contexto ${mood}, com base em ${reason}. Fica a ${r.distanceKm.toFixed(1)} km.`;
 }
 function isFav(id){return state.favorites.some(x=>x.id===id)}
 function fav(id){
@@ -685,7 +695,7 @@ function result(){
     </div>
 
     <div class="search-mode-banner">
-      <strong>${state.provider==='Google Places'?'Pesquisa qualificada Google Places':'Pesquisa aproximada OpenStreetMap'}</strong>
+      <strong>${state.provider==='Gemini + Google Maps'?'Decisão fundamentada em Google Maps':'Pesquisa aproximada OpenStreetMap'}</strong>
       <span>${requestSummary()}</span>
       ${state.provider==='OpenStreetMap'
         ?`<a target="_blank" rel="noopener" href="${googleMapsDiscoveryUrl()}">Pesquisar estes critérios no Google Maps</a>`
@@ -727,7 +737,7 @@ function result(){
 
     <button class="cta" onclick="window.open('${f.googleUrl||map(f)}','_blank','noopener')">🎲 Decide por mim</button>
     <div class="note">
-      Resultados ao vivo via ${state.provider}.${state.provider==='OpenStreetMap'?' Estes resultados são aproximados; o Google Places é necessário para ratings, fotografias e contexto fiável.':''}
+      Resultados via ${state.provider}.${state.provider==='OpenStreetMap'?' Estes resultados são aproximados; o Google Places é necessário para ratings, fotografias e contexto fiável.':''}
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
       Fotografias públicas são procuradas automaticamente; quando não existem, aparece uma imagem de localização.
     </div>
@@ -766,9 +776,9 @@ function profile(){
       <div><span>Nome</span><b>Pedro</b></div>
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
-      <div><span>Pesquisa</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'Google Places':'OpenStreetMap limitado'}</b></div>
+      <div><span>Motor</span><b>${window.NOMI_CONFIG?.GOOGLE_PLACES_PROXY_URL?'ODE · Gemini + Google Maps':'Modo local limitado'}</b></div>
       <div><span>Aprendizagem</span><b>${state.learned.visits||0} feedbacks</b></div>
-      <div><span>Versão</span><b>1.9.0</b></div>
+      <div><span>Produto</span><b>Nomi by OneArete</b></div><div><span>Versão</span><b>3.0.1</b></div>
     </div>
   </section></div></main>`;
 }
@@ -790,7 +800,7 @@ function openDrawer(){
     <button onclick="closeDrawer();setScreen('decisions')">Decisões anteriores</button>
     <button onclick="closeDrawer();setScreen('profile')">Perfil e preferências</button>
     <button onclick="clearNomiData()">Limpar dados locais</button>
-    <div class="drawer-note">A Nomi pesquisa opções reais e volta a ordená-las em cada pesquisa, segundo o tipo de saída, mood, orçamento, distância e preferências.</div>
+    <div class="drawer-note">Nomi é um produto da OneArete. O ODE interpreta o contexto, consulta fontes atuais e explica por que razão cada opção faz sentido.</div>
   </aside>`;
   document.body.appendChild(overlay);
 }
