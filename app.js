@@ -1,11 +1,14 @@
 
 function dismissStartupSplash(){
-  const splash=document.getElementById('startupSplash');
-  if(!splash)return;
-  setTimeout(()=>{
+  const removeSplash=()=>{
+    const splash=document.getElementById('startupSplash');
+    if(!splash)return;
     splash.classList.add('hide');
-    setTimeout(()=>splash.remove(),500);
-  },1800);
+    window.setTimeout(()=>splash.remove(),450);
+  };
+  window.setTimeout(removeSplash,1700);
+  window.setTimeout(removeSplash,3200);
+  window.addEventListener('pageshow',()=>window.setTimeout(removeSplash,120),{once:true});
 }
 
 
@@ -653,3 +656,4 @@ function render(){
   }[state.screen]||home)();
 }
 render();
+dismissStartupSplash();

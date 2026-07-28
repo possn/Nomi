@@ -1,24 +1,15 @@
-# Nomi v1.5.0 — Splash and Centered Flow
+# Nomi v1.5.1 — Splash Unblock Repair
 
-## Alterações
+Corrige o bloqueio no ecrã inicial.
 
-- Novo ecrã de abertura durante cerca de 2 segundos.
-- Mostra o ícone oficial Nomi, nome e slogan:
-  - Stop searching.
-  - Start deciding.
-- Home reorganizada para se aproximar do mockup:
-  - opções maiores;
-  - cartões quase a ocupar toda a largura;
-  - conjunto de opções centrado verticalmente;
-  - maior presença visual.
-- Mood e restantes passos com caixas maiores e composição mais central.
-- Mantém o motor de pesquisa contextual da v1.4.0.
+## Correção
+- O splash desaparece automaticamente após cerca de 2 segundos.
+- Existe um segundo mecanismo de segurança em JavaScript.
+- Existe também um failsafe em CSS, mesmo que o JavaScript falhe.
+- Cache busting atualizado para `1.5.1`.
 
 ## Atualização
-
 Substituir todo o conteúdo do repositório por este ZIP.
 
 Abrir:
-`https://possn.github.io/Nomi/?v=1.5.0`
-
-Em Perfil deve continuar visível a versão 1.4.0 até à próxima atualização funcional do motor; esta release é predominantemente visual.
+`https://possn.github.io/Nomi/?v=1.5.1`

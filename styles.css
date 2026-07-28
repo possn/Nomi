@@ -205,3 +205,10 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
   .action{min-height:58px}
   .flow .choice{min-height:106px}
 }
+
+/* v1.5.1 — splash failsafe */
+.startup-splash{animation:nomiSplashFailsafe 3.2s forwards}
+@keyframes nomiSplashFailsafe{
+  0%,72%{opacity:1;visibility:visible}
+  88%,100%{opacity:0;visibility:hidden;pointer-events:none}
+}
