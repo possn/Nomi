@@ -533,23 +533,30 @@ function fav(id){
   toast(isFav(id)?'Guardado nos favoritos':'Removido dos favoritos');
 }
 
+function openExternal(url){
+  if(!url)return;
+  window.open(url,'_blank','noopener');
+}
+
 function result(){
   const [f,...rest]=state.results;
   const bg=f.imageUrl?`style="background-image:url('${String(f.imageUrl).replace(/'/g,"%27")}')"`:'';
-  const cls='maincard has-photo';
-  const direct=`<div class="direct-links">
+  const cls='maincard has-photo clickable-result';
+  const primaryUrl=f.googleUrl||map(f);
+  const direct=`<div class="direct-links" onclick="event.stopPropagation()">
     ${f.website?`<a class="website" target="_blank" rel="noopener" href="${f.website}">Site</a>`:''}
-    <a class="google" target="_blank" rel="noopener" href="${f.googleUrl||map(f)}">Abrir restaurante</a>
+    <a class="google" target="_blank" rel="noopener" href="${primaryUrl}">Google Maps</a>
   </div>`;
 
   app.innerHTML=`<main class="results">
     <div class="rhead">
-      <button class="icon-btn" onclick="setScreen('prefs')">←</button>
+      <button class="icon-btn" onclick="setScreen('prefs')" aria-label="Voltar">←</button>
       <b>Nomi encontrou para ti</b>
-      <button class="icon-btn" onclick="search()">↻</button>
+      <button class="icon-btn home-result" onclick="setScreen('home')" aria-label="Home">⌂</button>
+      <button class="icon-btn" onclick="search()" aria-label="Pesquisar novamente">↻</button>
     </div>
 
-    <article class="${cls}" ${bg}>
+    <article class="${cls}" ${bg} onclick="openExternal('${String(primaryUrl).replace(/'/g,"%27")}')" role="link" tabindex="0">
       <div class="badge">♥ ${f.score}%<br>match</div>
       <h2>${f.name}</h2>
       <div class="meta">${f.cuisine}${f.address?` · ${f.address}`:''}</div>
@@ -557,27 +564,30 @@ function result(){
       <div class="stats">
         <span>⌖ ${f.distanceKm.toFixed(1)} km</span>
         ${f.rating?`<span>★ ${f.rating}${f.userRatingCount?` (${f.userRatingCount})`:''}</span>`:''}
-        <button class="fav" onclick="fav('${f.id}')">${isFav(f.id)?'♥':'♡'}</button>
+        <button class="fav" onclick="event.stopPropagation();fav('${f.id}')">${isFav(f.id)?'♥':'♡'}</button>
       </div>
       ${direct}
+      <div class="tap-hint">Toca no cartão para abrir no Google Maps</div>
     </article>
 
     <h3 class="sectiontitle">Outras excelentes opções</h3>
-    ${rest.slice(0,5).map(r=>`
-      <article class="alt with-photo">
+    ${rest.slice(0,5).map(r=>{
+      const url=r.googleUrl||map(r);
+      return `<article class="alt with-photo clickable-alt" onclick="openExternal('${String(url).replace(/'/g,"%27")}')" role="link" tabindex="0">
         <img class="alt-photo" src="${r.imageUrl}" alt="">
         <div>
           <h3>${r.name}</h3>
           <p>${r.cuisine} · ${r.distanceKm.toFixed(1)} km${r.address?` · ${r.address}`:''}</p>
         </div>
-        <a target="_blank" rel="noopener" href="${r.googleUrl||map(r)}">Abrir</a>
-      </article>`).join('')}
+        <span class="alt-open">Maps ›</span>
+      </article>`;
+    }).join('')}
 
-    <button class="cta" onclick="toast('A Nomi decidiu: ${f.name.replace(/'/g,'')}')">🎲 Decide por mim</button>
+    <button class="cta" onclick="openExternal('${String(primaryUrl).replace(/'/g,"%27")}')">🎲 Decide por mim</button>
     <div class="note">
       Resultados ao vivo via ${state.provider}.
       ${state.fallbackNote?` ${state.fallbackNote}`:''}
-      As imagens são fotografias quando disponíveis; caso contrário mostram o mapa real da localização.
+      Toca em qualquer opção para a abrir diretamente no Google Maps.
     </div>
   </main>`;
 }
@@ -615,7 +625,7 @@ function profile(){
       <div><span>Favoritos</span><b>${state.favorites.length}</b></div>
       <div><span>Decisões</span><b>${state.history.length}</b></div>
       <div><span>Pesquisa</span><b>Ao vivo e contextual</b></div>
-      <div><span>Versão</span><b>1.4.0</b></div>
+      <div><span>Versão</span><b>1.5.2</b></div>
     </div>
   </section>${nav('profile')}</div></main>`;
 }

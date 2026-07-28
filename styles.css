@@ -212,3 +212,28 @@ button{color:var(--text);-webkit-tap-highlight-color:transparent}
   0%,72%{opacity:1;visibility:visible}
   88%,100%{opacity:0;visibility:hidden;pointer-events:none}
 }
+
+
+/* v1.5.2 — result navigation, larger text and whole-card Maps actions */
+.rhead{grid-template-columns:42px 1fr 42px 42px;gap:3px;margin-bottom:14px}
+.rhead b{font-size:18px;line-height:1.2}
+.home-result{font-size:27px}
+.maincard{min-height:560px;padding:22px;border-radius:26px}
+.maincard h2{font-size:42px;line-height:1.02;margin-bottom:8px}
+.meta{font-size:17px;line-height:1.35}
+.why{font-size:18px;line-height:1.48;margin:17px 0}
+.stats{font-size:15px;gap:16px}
+.badge{width:auto;max-width:105px;right:14px;top:14px;padding:9px 12px;font-size:14px;line-height:1.15}
+.direct-links a{font-size:15px;padding:12px 16px}
+.tap-hint{font-size:12px;opacity:.78;margin-top:12px}
+.sectiontitle{font-size:21px;margin-top:22px;margin-bottom:11px}
+.alt{min-height:108px;border-radius:20px;padding:14px;gap:13px}
+.alt.with-photo{grid-template-columns:92px 1fr auto}
+.alt-photo{width:92px;height:76px;border-radius:13px}
+.alt h3{font-size:20px;line-height:1.16;margin-bottom:6px}
+.alt p{font-size:15px;line-height:1.35}
+.alt-open{background:var(--sage-soft);color:#4c6548;border-radius:999px;padding:11px 13px;font-size:14px;font-weight:800;white-space:nowrap}
+.clickable-result,.clickable-alt{cursor:pointer;-webkit-tap-highlight-color:rgba(255,115,95,.12)}
+.clickable-result:active,.clickable-alt:active{transform:scale(.992)}
+.results>.cta{font-size:19px;min-height:64px;margin-top:18px}
+.note{font-size:12px;line-height:1.45}

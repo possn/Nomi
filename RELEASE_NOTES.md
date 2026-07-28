@@ -1,9 +1,10 @@
-# Nomi v1.5.1
+# Nomi v1.5.2
 
-## Substituir no GitHub
 Substituir todo o conteúdo do repositório.
 
-## Reparação
-- Splash inicial deixou de bloquear a aplicação.
-- Duplo mecanismo JavaScript + failsafe CSS.
-- Cache busting 1.5.1.
+- Home nos resultados.
+- Tipografia maior.
+- Cartões completos abrem Google Maps.
+- Botão Decide por mim abre Google Maps.
+- Match badge corrigido.
+- Cache busting 1.5.2.
