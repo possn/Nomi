@@ -1,6 +1,6 @@
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const VERSION = "3.1.0";
+const VERSION = "3.1.1";
 
 export default {
   async fetch(request, env) {
@@ -58,8 +58,11 @@ async function decide(input, env) {
 
   const parsed = parseJson(text);
   const recommendations = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
-  const places = recommendations.slice(0, 8).map((item, index) => normalize(item, sources, input, index));
-  if (!places.length) throw new Error("O Gemini não devolveu recomendações estruturadas. Repete a pesquisa.");
+  let places = recommendations.slice(0, 8).map((item, index) => normalize(item, sources, input, index));
+  if (input.domain !== "family" && input.mood === "Romântico") {
+    places = places.filter(place => isRomanticCandidate(place));
+  }
+  if (!places.length) throw new Error("Não encontrei opções com evidência suficiente para esta ocasião. Aumenta a distância ou o orçamento.");
 
   return {
     provider: "Gemini + Google Maps",
@@ -77,14 +80,21 @@ function buildPrompt(input) {
   const family = input.domain === "family";
   const radiusKm = Math.round(Number(input.radiusMeters || 15000) / 1000);
   const prefs = (input.preferences || []).join(", ") || "sem preferências adicionais";
+  const occasion = input.mood || "casual";
   const task = family
-    ? `Encontra atividades reais para fazer com crianças. Idades/grupo: ${input.mood || "idades não indicadas"}.`
-    : `Encontra ${labelIntent(input.intent)} reais. Contexto: ${input.mood || "casual"}.`;
+    ? `Encontra atividades reais para fazer com crianças. Idades/grupo: ${occasion}.`
+    : `Encontra ${labelIntent(input.intent)} reais. A ocasião pedida é: ${occasion}.`;
+  const romanticRules = !family && occasion === "Romântico" ? `
+ROMANTIC OCCASION IS A HARD CONSTRAINT, NOT A SOFT PREFERENCE.
+Reject snack-bars, cervejarias, fast-food, take-away counters, generic cafés, food courts, noisy sports bars and purely practical neighbourhood eateries unless there is strong grounded evidence of an intimate romantic atmosphere.
+Prefer restaurants with at least two grounded romantic signals such as: intimate or elegant ambience, scenic view, candlelit/refined setting, quiet atmosphere, special-occasion positioning, strong wine/dinner experience, terrace with view, or repeated review evidence mentioning romance/anniversary/date-night.
+Do not award a score above 85 without grounded evidence of occasion fit. If evidence is weak, omit the place. It is better to return only 3 strong options than 8 weak ones.
+` : "";
 
   return `You are the OneArete Decision Engine powering Nomi. Use Google Maps grounding. ${task}
 Maximum radius: ${radiusKm} km. Budget: ${Number(input.budget || 30)} EUR ${family ? "for the group" : "per person"}. Preferences: ${prefs}.
-
-Deliberate internally across fit, quality, distance, budget, popularity, family suitability, accessibility and occasion. Select only real places. Never invent factual data. For missing facts use null or empty strings. Reservation or ticket URLs may only be returned when grounded or clearly official.
+${romanticRules}
+Deliberate across occasion fit FIRST, then quality, distance, budget, popularity, accessibility and preference fit. Select only real places. Never invent factual data. Every recommendation must include concrete reasons tied to grounded evidence. For missing facts use null or empty strings. Reservation or ticket URLs may only be returned when grounded or clearly official.
 
 Return ONLY valid JSON:
 {
@@ -109,7 +119,7 @@ Return ONLY valid JSON:
     }
   ]
 }
-Return 5 to 8 recommendations ordered best first. Score is an integer 1-99.`;
+Return 3 to 6 recommendations ordered best first. Score is an integer 1-99 and must reflect evidence-backed occasion fit.`;
 }
 
 function normalize(item, sources, input, index) {
@@ -138,6 +148,16 @@ function normalize(item, sources, input, index) {
     matchDetails: why.length ? why : [item.bestFor || "adequado ao contexto pedido"],
     bestFor: item.bestFor || ""
   };
+}
+
+
+function isRomanticCandidate(place) {
+  const text = normalizeText([place.name, place.cuisine, place.bestFor, ...(place.matchDetails || [])].join(" "));
+  const excluded = ["snack bar", "cervejaria", "fast food", "take away", "food court", "sports bar"];
+  if (excluded.some(term => text.includes(term))) return false;
+  const signals = ["romant", "intim", "elegant", "vista", "tranquil", "silenc", "vinho", "especial", "anivers", "date night", "terraco", "esplanada"];
+  const evidence = signals.filter(term => text.includes(term)).length;
+  return place.matchScore >= 78 && evidence >= 2;
 }
 
 function safeUrl(value) { try { const u = new URL(String(value || "")); return ["http:", "https:"].includes(u.protocol) ? u.toString() : ""; } catch { return ""; } }
