@@ -1,5 +1,5 @@
-const DEFAULT_MODEL = "gemini-3-flash-preview";
-const FALLBACK_MODELS = ["gemini-flash-latest", "gemini-3.1-flash-lite"];
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const FALLBACK_MODELS = ["gemini-2.5-flash","gemini-2.0-flash","gemini-flash-latest"];
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const VERSION = "3.1.2";
 
@@ -57,9 +57,9 @@ async function decide(input, env) {
     raw = await response.json().catch(() => ({}));
     if (response.ok) break;
 
-    lastError = readGeminiError(raw, response.status);
+    lastError = readGeminiError(raw, response.status); console.log("Gemini",candidateModel,response.status,JSON.stringify(raw));
     const unavailableModel = response.status === 404 || /no longer available|not found|unsupported model/i.test(lastError);
-    if (!unavailableModel) throw new Error(lastError);
+    if (!unavailableModel) if(response.status===429){continue;} throw new Error(lastError);
   }
 
   if (!response?.ok) throw new Error(lastError || "Não foi possível contactar um modelo Gemini disponível.");
