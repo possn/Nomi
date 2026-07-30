@@ -1,7 +1,8 @@
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const VERSION = "3.1.9";
+const GEMINI_INTERACTIONS = "https://generativelanguage.googleapis.com/v1beta/interactions";
+const VERSION = "3.2.0";
 
 export default {
   async fetch(request, env) {
@@ -58,8 +59,14 @@ export default {
 async function decide(input, env) {
   const configuredModel = env.GEMINI_MODEL || DEFAULT_MODEL;
   const models = [...new Set([configuredModel, ...FALLBACK_MODELS].filter(Boolean))];
+
+  // Stage 1: discover editorial leads on the public web (guides, critics, blogs, travel pages).
+  // This broadens discovery beyond the popularity-biased Maps result set. Failure is non-fatal.
+  const webDiscovery = await discoverWebCandidates(input, env, models);
+
+  // Stage 2: validate, geo-check and rank every lead using Google Maps grounding.
   const body = {
-    contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
+    contents: [{ role: "user", parts: [{ text: buildPrompt(input, webDiscovery) }] }],
     tools: [{ googleMaps: {} }],
     toolConfig: {
       retrievalConfig: {
@@ -175,7 +182,7 @@ async function decide(input, env) {
   }
 
   return {
-    provider: "Gemini + Google Maps",
+    provider: "Gemini + Google Search + Google Maps",
     engine: "OneArete Decision Engine",
     version: VERSION,
     model: chosenModel,
@@ -183,11 +190,183 @@ async function decide(input, env) {
     confidence: clamp(Number(parsed.confidence || 0.82), 0.3, 0.99),
     uncertainty: Array.isArray(parsed.uncertainty) ? parsed.uncertainty.filter(Boolean).slice(0, 4) : [],
     places,
-    sources
+    sources: [...sources, ...(webDiscovery.sources || [])],
+    discovery: {
+      webCandidates: (webDiscovery.candidates || []).length,
+      webQueries: webDiscovery.queries || [],
+      area: webDiscovery.area || {}
+    }
   };
 }
 
-function buildPrompt(input) {
+
+async function discoverWebCandidates(input, env, models) {
+  const area = await reverseGeocode(input).catch(() => ({}));
+  const prompt = buildWebDiscoveryPrompt(input, area);
+  const attempts = [];
+
+  for (const model of models) {
+    try {
+      const response = await fetch(GEMINI_INTERACTIONS, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": env.GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          model,
+          input: prompt,
+          tools: [{ type: "google_search" }],
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+            schema: webDiscoverySchema()
+          },
+          generation_config: { thinking_level: "low" }
+        })
+      });
+      const raw = await response.json().catch(() => ({}));
+      attempts.push({ model, status: response.status, message: raw?.error?.message || "" });
+      console.log("Google Search discovery attempt", attempts.at(-1));
+      if (!response.ok) {
+        if ([404, 429].includes(response.status) || response.status >= 500) continue;
+        break;
+      }
+
+      const text = extractInteractionText(raw);
+      const parsed = parseJson(text) || {};
+      const annotations = extractInteractionCitations(raw);
+      const candidates = Array.isArray(parsed.candidates) ? parsed.candidates.slice(0, 50) : [];
+      return {
+        area,
+        candidates,
+        sources: annotations,
+        queries: extractInteractionQueries(raw),
+        model
+      };
+    } catch (error) {
+      attempts.push({ model, status: 0, message: error?.message || String(error) });
+    }
+  }
+
+  console.warn("Editorial web discovery unavailable; continuing with Maps only", attempts);
+  return { area, candidates: [], sources: [], queries: [], model: "" };
+}
+
+async function reverseGeocode(input) {
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("lat", String(input.latitude));
+  url.searchParams.set("lon", String(input.longitude));
+  url.searchParams.set("zoom", "12");
+  url.searchParams.set("addressdetails", "1");
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Nomi-OneArete/3.2 (location discovery)",
+      "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.7"
+    }
+  });
+  if (!response.ok) return {};
+  const data = await response.json();
+  const a = data.address || {};
+  return {
+    displayName: data.display_name || "",
+    locality: a.city || a.town || a.village || a.hamlet || a.municipality || "",
+    municipality: a.municipality || a.county || "",
+    district: a.state_district || a.state || "",
+    country: a.country || "Portugal"
+  };
+}
+
+function buildWebDiscoveryPrompt(input, area) {
+  const family = input.domain === "family";
+  const radiusKm = Math.max(1.5, Number(input.radiusMeters || 6000) / 1000);
+  const preferences = Array.isArray(input.preferences) ? input.preferences.filter(Boolean) : [];
+  const locality = [area.locality, area.municipality, area.district, area.country].filter(Boolean).join(", ") || `${input.latitude}, ${input.longitude}`;
+  const subject = family ? "family activities" : `${labelIntent(input.intent)} restaurants`;
+  return `Use Google Search extensively to discover real ${subject} near ${locality}, centred on coordinates ${input.latitude}, ${input.longitude}, within about ${radiusKm.toFixed(1)} km.
+The occasion/group is "${input.mood || "not specified"}". Mandatory characteristics: ${preferences.join(", ") || "none"}. Budget: ${Number(input.budget || 30)} EUR ${family ? "for the group" : "per person"}.
+
+SEARCH BEYOND DIRECTORY LISTINGS. Search Portuguese and English sources, including:
+- newspaper and magazine restaurant/travel features;
+- local food critics and specialist reviewers;
+- reputable travel blogs and destination guides;
+- hotel, tourism-board and regional guide pages;
+- articles such as "best ... near ...", "hidden gems", "restaurants with view", "family activities", and synonyms for every selected characteristic;
+- nearby villages, coastal settlements, countryside and lesser-known localities inside the radius.
+
+Do not return generic articles without named places. Find up to 50 named candidate places. A place may be included as a lead when an article strongly suggests it matches the request; Google Maps will validate it later. Prefer independent corroboration from more than one source. Extract a direct public image URL only when clearly available; otherwise leave imageUrl empty.
+Return only JSON following the schema.`;
+}
+
+function webDiscoverySchema() {
+  return {
+    type: "object",
+    properties: {
+      candidates: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            locality: { type: "string" },
+            evidence: { type: "string" },
+            matchedCharacteristics: { type: "array", items: { type: "string" } },
+            sourceUrls: { type: "array", items: { type: "string" } },
+            imageUrl: { type: "string" }
+          },
+          required: ["name", "locality", "evidence", "matchedCharacteristics", "sourceUrls", "imageUrl"]
+        }
+      }
+    },
+    required: ["candidates"]
+  };
+}
+
+function extractInteractionText(raw) {
+  const texts = [];
+  for (const step of raw?.steps || []) {
+    if (step?.type !== "model_output") continue;
+    for (const block of step.content || []) if (block?.type === "text" && block.text) texts.push(block.text);
+  }
+  return texts.join("\n").trim();
+}
+
+function extractInteractionCitations(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const step of raw?.steps || []) {
+    if (step?.type !== "model_output") continue;
+    for (const block of step.content || []) {
+      for (const annotation of block.annotations || []) {
+        if (annotation?.type !== "url_citation" || !annotation.url || seen.has(annotation.url)) continue;
+        seen.add(annotation.url);
+        out.push({ title: annotation.title || "Fonte editorial", uri: annotation.url, type: "web" });
+      }
+    }
+  }
+  return out.slice(0, 60);
+}
+
+function extractInteractionQueries(raw) {
+  return (raw?.steps || [])
+    .filter(step => step?.type === "google_search_call")
+    .flatMap(step => step?.arguments?.queries || [])
+    .filter(Boolean)
+    .slice(0, 30);
+}
+
+function formatEditorialLeads(discovery) {
+  const candidates = Array.isArray(discovery?.candidates) ? discovery.candidates : [];
+  if (!candidates.length) return "No independent web leads were available for this request; perform a broad Maps search.";
+  return candidates.slice(0, 50).map((item, index) => {
+    const urls = Array.isArray(item.sourceUrls) ? item.sourceUrls.filter(Boolean).slice(0, 4).join(" | ") : "";
+    const chars = Array.isArray(item.matchedCharacteristics) ? item.matchedCharacteristics.join(", ") : "";
+    return `${index + 1}. ${item.name}${item.locality ? ` — ${item.locality}` : ""}\n   Editorial evidence: ${item.evidence || ""}\n   Matched characteristics: ${chars}\n   Sources: ${urls}\n   Candidate image: ${item.imageUrl || ""}`;
+  }).join("\n");
+}
+
+function buildPrompt(input, webDiscovery = { candidates: [], sources: [], area: {} }) {
   const family = input.domain === "family";
   const radiusKm = Math.max(1.5, Number(input.radiusMeters || 6000) / 1000);
   const travelMinutes = Math.max(5, Number(input.travelTimeMinutes || Math.round(radiusKm / 0.6)));
@@ -202,18 +381,23 @@ function buildPrompt(input) {
   const occasionRule = family
     ? `A composição etária "${occasion}" é uma restrição obrigatória. Rejeita atividades inadequadas, inseguras ou sem interesse claro para essas idades.`
     : `A ocasião "${occasion}" é uma restrição obrigatória. ${occasionDefinition(occasion)}`;
+  const editorialLeads = formatEditorialLeads(webDiscovery);
 
   return `You are the OneArete Decision Engine powering Nomi. Use Google Maps grounding. ${task}
 Respond in Portuguese from Portugal.
 The user's current coordinates are latitude ${Number(input.latitude).toFixed(6)}, longitude ${Number(input.longitude).toFixed(6)}.
+
+EDITORIAL WEB DISCOVERY (guides, critics, bloggers and travel publications):
+${editorialLeads}
+These are candidate leads, not automatically approved results. You MUST verify each lead with Google Maps, but you MUST actively investigate them instead of defaulting to the most popular Maps listings. Cross-source editorial evidence is a strong relevance signal, while review count is only a weak tie-breaker.
 
 CORE DECISION PRINCIPLE:
 Every user-selected characteristic is a HARD CONSTRAINT. Never treat a selected characteristic as a decorative keyword, minor bonus or optional preference. A candidate that fails even one selected characteristic must be excluded, regardless of fame, rating, review count or proximity.
 
 SEARCH METHOD — FOLLOW IN THIS ORDER:
 1. Translate the occasion, intent, budget, maximum travel time and EVERY selected characteristic into explicit acceptance tests.
-2. Build a broad local candidate pool across the entire permitted area. Include nearby villages, coast, countryside, hotels, cultural venues, parks and lesser-known local options where relevant. Do not focus only on city centres or highly reviewed places.
-3. Compare at least 30 plausible candidates internally (or every plausible candidate found inside the permitted area when fewer exist). Use several search formulations/synonyms for every selected characteristic and search the whole radius, including villages and coastal/countryside areas.
+2. Start from BOTH Google Maps and the editorial web leads above. Search by the exact selected characteristics, occasion, nearby locality names, villages, coast, countryside, hotels, viewpoints, rooftops, terraces, travel guides and specialist food/experience publications. Do not focus only on city centres or highly reviewed places.
+3. Compare at least 40 plausible candidates internally (or every plausible candidate found inside the permitted area when fewer exist). Use several search formulations/synonyms for every selected characteristic and search the whole radius, including villages and coastal/countryside areas.
 4. For each candidate, verify every acceptance test with grounded evidence. Mark each test pass/fail/unknown.
 5. Reject all candidates with any fail or unknown mandatory test.
 6. Rank survivors by total intent/occasion fit, strength of evidence for all characteristics, quality, real distance and budget fit. Popularity is only a weak tie-breaker.
@@ -278,7 +462,9 @@ Return ONLY valid JSON:
       "website": "",
       "reservationUrl": "",
       "ticketUrl": "",
-      "imageUrl": ""
+      "imageUrl": "",
+      "editorialEvidence": "",
+      "sourceUrls": [""]
     }
   ]
 }
@@ -364,15 +550,23 @@ function normalize(item, sources, input, index) {
     romanticSignals: Array.isArray(item.romanticSignals) ? item.romanticSignals.filter(Boolean).slice(0, 5) : [],
     viewEvidence: String(item.viewEvidence || item?.characteristicEvidence?.Vista || "").trim(),
     preferenceEvidence: evidenceMapValues(item.characteristicEvidence),
-    evidenceStrength: String(item.evidenceStrength || "").toLowerCase()
+    evidenceStrength: String(item.evidenceStrength || "").toLowerCase(),
+    editorialEvidence: String(item.editorialEvidence || "").trim(),
+    sourceUrls: Array.isArray(item.sourceUrls) ? item.sourceUrls.map(safeUrl).filter(Boolean).slice(0, 6) : []
   };
 }
 
 
 async function enrichPlaceImages(places) {
   const enriched = await Promise.all(places.map(async (place, index) => {
-    if (place.imageUrl || !place.website || index >= 24) return place;
-    const imageUrl = await fetchOpenGraphImage(place.website);
+    if (place.imageUrl || index >= 30) return place;
+    const candidatePages = [place.website, ...(place.sourceUrls || [])].filter(Boolean);
+    if (!candidatePages.length) return place;
+    let imageUrl = "";
+    for (const page of candidatePages.slice(0, 3)) {
+      imageUrl = await fetchOpenGraphImage(page);
+      if (imageUrl) break;
+    }
     return imageUrl ? { ...place, imageUrl } : place;
   }));
   return enriched;
@@ -460,6 +654,10 @@ function calculateDecisionScore(place, input, maxRadiusKm) {
 
   // Evidence strength: 12 points.
   score += place.evidenceStrength === "strong" ? 12 : place.evidenceStrength === "moderate" ? 6 : 0;
+
+  // Independent editorial corroboration: up to 8 points.
+  if (hasSubstantiveEvidence(place.editorialEvidence)) score += 5;
+  score += Math.min(3, (place.sourceUrls || []).length);
 
   // Quality: 10 points; popularity is deliberately capped.
   if (Number.isFinite(Number(place.rating))) score += Math.max(0, Math.min(7, (Number(place.rating) - 3.5) * 5.5));
@@ -603,6 +801,7 @@ function evidenceText(place) {
     place.bestFor,
     place.occasionEvidence,
     place.viewEvidence,
+    place.editorialEvidence,
     ...(place.matchDetails || []),
     ...(place.romanticSignals || []),
     ...(place.preferenceEvidence || []),
