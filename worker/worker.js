@@ -1,7 +1,7 @@
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const VERSION = "3.1.4";
+const VERSION = "3.1.5";
 
 export default {
   async fetch(request, env) {
@@ -70,8 +70,7 @@ async function decide(input, env) {
       }
     },
     generationConfig: {
-      maxOutputTokens: 4096,
-      responseMimeType: "application/json"
+      maxOutputTokens: 4096
     }
   };
 
@@ -136,6 +135,14 @@ async function decide(input, env) {
     }));
 
   const parsed = parseJson(text);
+  if (!parsed) {
+    throw odeError(
+      "A resposta fundamentada da Gemini não veio num formato utilizável. Tenta novamente.",
+      502,
+      "GEMINI_RESPONSE_PARSE_FAILED",
+      { model: chosenModel, preview: text.slice(0, 500) }
+    );
+  }
   const recommendations = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
   let places = recommendations.slice(0, 8).map((item, index) => normalize(item, sources, input, index));
 
