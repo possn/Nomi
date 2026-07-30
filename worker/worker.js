@@ -1,7 +1,7 @@
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
-const FALLBACK_MODELS = ["gemini-2.5-flash","gemini-2.0-flash","gemini-flash-latest"];
+const DEFAULT_MODEL = "gemini-3.6-flash";
+const FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const VERSION = "3.1.2";
+const VERSION = "3.1.4";
 
 export default {
   async fetch(request, env) {
@@ -18,70 +18,144 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method === "GET" && ["/", "/health"].includes(url.pathname)) {
-      return json({ ok: true, service: "OneArete Decision Engine", product: "Nomi", version: VERSION, geminiConfigured: Boolean(env.GEMINI_API_KEY) }, 200, cors);
+      return json({
+        ok: true,
+        service: "OneArete Decision Engine",
+        product: "Nomi",
+        version: VERSION,
+        defaultModel: env.GEMINI_MODEL || DEFAULT_MODEL,
+        geminiConfigured: Boolean(env.GEMINI_API_KEY)
+      }, 200, cors);
     }
-    if (request.method === "GET" && url.pathname === "/version") return json({ version: VERSION }, 200, cors);
-    if (request.method !== "POST" || url.pathname !== "/decision") return json({ error: "Usa POST /decision para pedir uma decisão." }, 405, cors);
-    if (!env.GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY não configurada no Worker." }, 500, cors);
+    if (request.method === "GET" && url.pathname === "/version") {
+      return json({ version: VERSION, defaultModel: env.GEMINI_MODEL || DEFAULT_MODEL }, 200, cors);
+    }
+    if (request.method !== "POST" || url.pathname !== "/decision") {
+      return json({ error: "Usa POST /decision para pedir uma decisão." }, 405, cors);
+    }
+    if (!env.GEMINI_API_KEY) {
+      return json({ error: "GEMINI_API_KEY não configurada no Worker." }, 500, cors);
+    }
 
     try {
       const input = await request.json();
       validate(input);
       return json(await decide(input, env), 200, cors);
     } catch (error) {
-      return json({ error: error?.message || "Erro interno do OneArete Decision Engine." }, 500, cors);
+      console.error("ODE decision error", {
+        message: error?.message || String(error),
+        status: error?.status || 500,
+        details: error?.details || null
+      });
+      return json({
+        error: error?.message || "Erro interno do OneArete Decision Engine.",
+        code: error?.code || "ODE_ERROR"
+      }, error?.status || 500, cors);
     }
   }
 };
 
 async function decide(input, env) {
-  const model = env.GEMINI_MODEL || DEFAULT_MODEL;
+  const configuredModel = env.GEMINI_MODEL || DEFAULT_MODEL;
+  const models = [...new Set([configuredModel, ...FALLBACK_MODELS].filter(Boolean))];
   const body = {
     contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
     tools: [{ googleMaps: {} }],
-    toolConfig: { retrievalConfig: { latLng: { latitude: Number(input.latitude), longitude: Number(input.longitude) } } },
-    generationConfig: { maxOutputTokens: 4096, responseMimeType: "application/json" }
+    toolConfig: {
+      retrievalConfig: {
+        latLng: {
+          latitude: Number(input.latitude),
+          longitude: Number(input.longitude)
+        }
+      }
+    },
+    generationConfig: {
+      maxOutputTokens: 4096,
+      responseMimeType: "application/json"
+    }
   };
 
-  const models = [...new Set([model, ...FALLBACK_MODELS].filter(Boolean))];
-  let response;
   let raw = {};
-  let lastError = "";
+  let chosenModel = "";
+  const attempts = [];
 
-  for (const candidateModel of models) {
-    response = await fetch(`${GEMINI_BASE}/${candidateModel}:generateContent`, {
+  for (const model of models) {
+    const response = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
       body: JSON.stringify(body)
     });
-    raw = await response.json().catch(() => ({}));
-    if (response.ok) break;
 
-    lastError = readGeminiError(raw, response.status); console.log("Gemini",candidateModel,response.status,JSON.stringify(raw));
-    const unavailableModel = response.status === 404 || /no longer available|not found|unsupported model/i.test(lastError);
-    if (!unavailableModel) if(response.status===429){continue;} throw new Error(lastError);
+    raw = await response.json().catch(() => ({}));
+    const message = raw?.error?.message || "pedido recusado";
+    attempts.push({ model, status: response.status, message });
+
+    console.log("Gemini attempt", {
+      model,
+      status: response.status,
+      statusText: response.statusText,
+      errorStatus: raw?.error?.status || null,
+      message
+    });
+
+    if (response.ok) {
+      chosenModel = model;
+      break;
+    }
+
+    const retryable = response.status === 404 || response.status === 429 || response.status >= 500;
+    if (!retryable) {
+      throw odeError(`Gemini ${response.status}: ${message}`, response.status, "GEMINI_REQUEST_FAILED", attempts);
+    }
   }
 
-  if (!response?.ok) throw new Error(lastError || "Não foi possível contactar um modelo Gemini disponível.");
+  if (!chosenModel) {
+    const last = attempts.at(-1) || {};
+    const allQuota = attempts.length > 0 && attempts.every(a => a.status === 429);
+    throw odeError(
+      allQuota
+        ? "A quota Gemini está temporariamente indisponível para os modelos atuais. Tenta novamente mais tarde ou ativa faturação no projeto Google AI Studio."
+        : `Não foi possível contactar um modelo Gemini disponível. Último erro: ${last.message || "desconhecido"}`,
+      allQuota ? 429 : (last.status || 503),
+      allQuota ? "GEMINI_QUOTA_EXHAUSTED" : "NO_GEMINI_MODEL_AVAILABLE",
+      attempts
+    );
+  }
 
   const candidate = raw.candidates?.[0];
-  const text = (candidate?.content?.parts || []).map(p => p.text || "").join("\n").trim();
+  const text = (candidate?.content?.parts || []).map(part => part.text || "").join("\n").trim();
   const sources = (candidate?.groundingMetadata?.groundingChunks || [])
     .filter(chunk => chunk.maps)
-    .map(chunk => ({ title: chunk.maps.title || "Google Maps", uri: chunk.maps.uri || "", placeId: chunk.maps.placeId || "" }));
+    .map(chunk => ({
+      title: chunk.maps.title || "Google Maps",
+      uri: chunk.maps.uri || "",
+      placeId: chunk.maps.placeId || ""
+    }));
 
   const parsed = parseJson(text);
   const recommendations = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
   let places = recommendations.slice(0, 8).map((item, index) => normalize(item, sources, input, index));
+
   if (input.domain !== "family" && input.mood === "Romântico") {
-    places = places.filter(place => isRomanticCandidate(place));
+    places = places.filter(isRomanticCandidate);
   }
-  if (!places.length) throw new Error("Não encontrei opções com evidência suficiente para esta ocasião. Aumenta a distância ou o orçamento.");
+
+  if (!places.length) {
+    throw odeError(
+      "Não encontrei opções com evidência suficiente para esta ocasião. Aumenta a distância ou o orçamento.",
+      422,
+      "INSUFFICIENT_EVIDENCE"
+    );
+  }
 
   return {
     provider: "Gemini + Google Maps",
     engine: "OneArete Decision Engine",
     version: VERSION,
+    model: chosenModel,
     domain: input.domain || "restaurant",
     confidence: clamp(Number(parsed.confidence || 0.82), 0.3, 0.99),
     uncertainty: Array.isArray(parsed.uncertainty) ? parsed.uncertainty.filter(Boolean).slice(0, 4) : [],
@@ -164,7 +238,6 @@ function normalize(item, sources, input, index) {
   };
 }
 
-
 function isRomanticCandidate(place) {
   const text = normalizeText([place.name, place.cuisine, place.bestFor, ...(place.matchDetails || [])].join(" "));
   const excluded = ["snack bar", "cervejaria", "fast food", "take away", "food court", "sports bar"];
@@ -174,13 +247,59 @@ function isRomanticCandidate(place) {
   return place.matchScore >= 78 && evidence >= 2;
 }
 
-function safeUrl(value) { try { const u = new URL(String(value || "")); return ["http:", "https:"].includes(u.protocol) ? u.toString() : ""; } catch { return ""; } }
-function findSource(title, sources) { const needle = normalizeText(title); if (!needle) return null; return sources.find(s => { const hay = normalizeText(s.title); return hay.includes(needle) || needle.includes(hay); }) || null; }
-function parseJson(text) { const clean = String(text || "").replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim(); try { return JSON.parse(clean); } catch {} const start = clean.indexOf("{"); const end = clean.lastIndexOf("}"); if (start >= 0 && end > start) { try { return JSON.parse(clean.slice(start, end + 1)); } catch {} } return null; }
-function validate(input) { if (!Number.isFinite(Number(input.latitude)) || !Number.isFinite(Number(input.longitude))) throw new Error("Localização inválida."); if (!["restaurant", "family"].includes(input.domain || "restaurant")) throw new Error("Domínio de decisão inválido."); }
-function labelIntent(intent) { return ({ eat: "restaurants", coffee: "cafés", drink: "bars", dessert: "dessert places", surprise: "food and drink places" })[intent] || "restaurants"; }
-function readGeminiError(data, status) { return `Gemini ${status}: ${data?.error?.message || "pedido recusado"}`; }
-function normalizeText(v) { return String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
-function slug(v) { return normalizeText(v).replace(/ /g, "-").slice(0, 48); }
-function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
-function json(data, status, headers) { return new Response(JSON.stringify(data, null, 2), { status, headers: { ...headers, "Content-Type": "application/json; charset=utf-8" } }); }
+function odeError(message, status = 500, code = "ODE_ERROR", details = null) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  error.details = details;
+  return error;
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+function findSource(title, sources) {
+  const needle = normalizeText(title);
+  if (!needle) return null;
+  return sources.find(source => {
+    const haystack = normalizeText(source.title);
+    return haystack.includes(needle) || needle.includes(haystack);
+  }) || null;
+}
+function parseJson(text) {
+  const clean = String(text || "").replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  try { return JSON.parse(clean); } catch {}
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(clean.slice(start, end + 1)); } catch {}
+  }
+  return null;
+}
+function validate(input) {
+  if (!Number.isFinite(Number(input.latitude)) || !Number.isFinite(Number(input.longitude))) {
+    throw odeError("Localização inválida.", 400, "INVALID_LOCATION");
+  }
+  if (!["restaurant", "family"].includes(input.domain || "restaurant")) {
+    throw odeError("Domínio de decisão inválido.", 400, "INVALID_DOMAIN");
+  }
+}
+function labelIntent(intent) {
+  return ({ eat: "restaurants", coffee: "cafés", drink: "bars", dessert: "dessert places", surprise: "food and drink places" })[intent] || "restaurants";
+}
+function normalizeText(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+}
+function slug(value) { return normalizeText(value).replace(/ /g, "-").slice(0, 48); }
+function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+function json(data, status, headers) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json; charset=utf-8" }
+  });
+}
