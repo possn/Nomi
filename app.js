@@ -472,13 +472,14 @@ async function google(proxy,loc){
     body:JSON.stringify({
       latitude:loc.lat,
       longitude:loc.lon,
-      radiusMeters:Math.min(50000,Math.max(1500,state.distance*700)),
+      travelTimeMinutes:state.distance,
+      radiusMeters:Math.min(30000,Math.max(1500,state.distance*600)),
       domain:state.domain,
       intent:state.intent,
       mood:state.mood,
       budget:state.budget,
       preferences:state.prefs,
-      maxResults:12
+      maxResults:30
     })
   },22000);
 
@@ -754,8 +755,8 @@ function result(){
       </div>
     </article>
 
-    <h3 class="sectiontitle">Outras excelentes opções</h3>
-    ${rest.slice(0,5).map(r=>`
+    <h3 class="sectiontitle">Todas as opções encontradas (${state.results.length})</h3>
+    ${rest.map(r=>`
       <article class="alt with-photo clickable-alt"
         onclick="window.open('${r.googleUrl||map(r)}','_blank','noopener')">
         <img class="alt-photo" src="${r.imageUrl}" alt="${r.name}"
