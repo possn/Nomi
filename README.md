@@ -1,4 +1,4 @@
-# Nomi v3.1.1 — OneArete Decision Engine Foundation
+# Nomi v3.1.2 — OneArete Decision Engine Foundation
 
 **Stop searching. Start deciding.**  
 **by OneArete**
@@ -25,3 +25,8 @@ A aplicação envia um pedido estruturado ao Cloudflare Worker. O Worker usa a s
 7. Substituir no GitHub os ficheiros indicados em `FILES_TO_REPLACE_IN_GITHUB.txt`.
 
 Nunca colocar a chave Gemini no GitHub.
+
+
+## Gemini 3
+
+O Worker usa `gemini-3-flash-preview` e possui fallback automático para modelos Flash disponíveis.

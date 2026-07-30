@@ -1,20 +1,13 @@
-# Nomi v3.1.1 — ODE Live Decision Integration
+# Nomi v3.1.2 — Gemini Model Migration Repair
 
-## Implementado
+## Correções
 
-- Endpoint real `POST /decision` no Cloudflare Worker.
-- Endpoints `GET /health` e `GET /version`.
-- Nomi ligada ao ODE através de `ODE_URL`.
-- Compatibilidade temporária com `GOOGLE_PLACES_PROXY_URL`.
-- Decision Confidence visível nos resultados.
-- Decision Uncertainty para factos que o ODE não conseguiu confirmar.
-- Completion actions: disponibilidade/reserva/bilhetes, calendário e convite.
-- Domínios Restaurantes e Atividades com Miúdos preservados.
-- Branding `by OneArete` preservado.
+- Migração de `gemini-2.5-flash` para `gemini-3-flash-preview`.
+- Remoção da configuração de temperatura antiga, seguindo as recomendações da família Gemini 3.
+- Fallback automático para `gemini-flash-latest` e `gemini-3.1-flash-lite` quando um modelo é retirado ou fica indisponível.
+- Mantidas as regras de relevância romântica da v3.1.1.
 
-## Configuração obrigatória
+## Ficheiros a substituir
 
-1. Publicar `worker/worker.js` no Worker Cloudflare.
-2. Manter a secret `GEMINI_API_KEY`.
-3. Em `config.js`, preencher `ODE_URL` com o URL do Worker, sem barra final.
-4. Publicar os ficheiros da raiz no GitHub Pages.
+- `worker/worker.js` na Cloudflare.
+- Opcionalmente `worker/README.md`, `README.md`, `RELEASE_NOTES.md` e `FILES_TO_REPLACE_IN_GITHUB.txt` no GitHub.

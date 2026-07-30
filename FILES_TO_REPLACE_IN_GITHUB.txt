@@ -1,12 +1,12 @@
-NOMI v3.1.1 — ROMANTIC RELEVANCE REPAIR
+NOMI v3.1.2 — FICHEIROS A SUBSTITUIR
 
-SUBSTITUIR NO GITHUB:
-- app.js
-- config.js
-- README.md
-- RELEASE_NOTES.md
-
-ATUALIZAR NA CLOUDFLARE:
+CLOUDFLARE WORKER (obrigatório):
 - worker/worker.js
 
-NÃO É NECESSÁRIO SUBSTITUIR OS ASSETS.
+GITHUB (documentação, opcional):
+- README.md
+- RELEASE_NOTES.md
+- FILES_TO_REPLACE_IN_GITHUB.txt
+- worker/README.md
+
+Não é necessário substituir app.js, config.js, index.html, styles.css ou assets.
