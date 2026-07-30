@@ -1,6 +1,7 @@
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3-flash-preview";
+const FALLBACK_MODELS = ["gemini-flash-latest", "gemini-3.1-flash-lite"];
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const VERSION = "3.1.1";
+const VERSION = "3.1.2";
 
 export default {
   async fetch(request, env) {
@@ -39,16 +40,29 @@ async function decide(input, env) {
     contents: [{ role: "user", parts: [{ text: buildPrompt(input) }] }],
     tools: [{ googleMaps: {} }],
     toolConfig: { retrievalConfig: { latLng: { latitude: Number(input.latitude), longitude: Number(input.longitude) } } },
-    generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: "application/json" }
+    generationConfig: { maxOutputTokens: 4096, responseMimeType: "application/json" }
   };
 
-  const response = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-    body: JSON.stringify(body)
-  });
-  const raw = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(readGeminiError(raw, response.status));
+  const models = [...new Set([model, ...FALLBACK_MODELS].filter(Boolean))];
+  let response;
+  let raw = {};
+  let lastError = "";
+
+  for (const candidateModel of models) {
+    response = await fetch(`${GEMINI_BASE}/${candidateModel}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: JSON.stringify(body)
+    });
+    raw = await response.json().catch(() => ({}));
+    if (response.ok) break;
+
+    lastError = readGeminiError(raw, response.status);
+    const unavailableModel = response.status === 404 || /no longer available|not found|unsupported model/i.test(lastError);
+    if (!unavailableModel) throw new Error(lastError);
+  }
+
+  if (!response?.ok) throw new Error(lastError || "Não foi possível contactar um modelo Gemini disponível.");
 
   const candidate = raw.candidates?.[0];
   const text = (candidate?.content?.parts || []).map(p => p.text || "").join("\n").trim();
